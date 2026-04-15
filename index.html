@@ -66,7 +66,7 @@
         </table>
     </div>
 
-    <!-- 領取彈窗 -->
+    <!-- 修改彈窗 -->
     <div id="editModal" class="modal">
         <div class="modal-content">
             <h2 id="modalTitle" style="margin-top:0;">編輯領取資訊</h2>
@@ -90,8 +90,8 @@
     </div>
 
     <script>
-        // ★ 請在此填入你「最新部署」後的網址
-        const GAS_URL = "在此貼上新的GAS網址"; 
+        // ★ 已填入你最新的 GAS URL
+        const GAS_URL = "https://google.com"; 
 
         const userList = ["Leo", "Mason", "Mayce", "Sherman", "ting ting", "Jenna", "Roy", "Arron", "solar", "Willam", "hanson"];
         const telcoList = ["CSL", "3HK", "SmarTone", "CMHK", "Lucky SIM"];
@@ -119,11 +119,15 @@
             toggleLoader(true);
             try {
                 const res = await fetch(GAS_URL);
+                if (!res.ok) throw new Error("網路回應不正確");
                 const data = await res.json();
-                simRecords = data.length > 0 ? data : Array.from({length:30}, (_,i)=>({id:"M"+(i+1).toString().padStart(2,'0'), telco:"---", remains:"---", expiry:"---", location:"---", staff:"---", date:"---"}));
+                simRecords = (data && data.length > 0) ? data : generateInitial();
                 setDirty(false);
                 render();
-            } catch(e) { alert("連線失敗，請檢查 GAS 權限設定為「所有人」！"); }
+            } catch(e) { 
+                console.error(e);
+                alert("【連線失敗】請檢查：\n1. GAS 是否部署為『所有人 (Anyone)』。\n2. 試算表第一行是否有標題：ID, Telco, Remains, Expiry, Location, Staff, Date"); 
+            }
             toggleLoader(false);
         }
 
@@ -132,8 +136,8 @@
             toggleLoader(true);
             try {
                 await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(simRecords) });
-                setTimeout(() => { setDirty(false); loadData(); alert("同步完成！"); }, 1000);
-            } catch(e) { alert("同步失敗"); toggleLoader(false); }
+                setTimeout(() => { setDirty(false); loadData(); alert("雲端同步完成！"); }, 1500);
+            } catch(e) { alert("同步失敗，請檢查網路連線"); toggleLoader(false); }
         }
 
         function setDirty(dirty) {
@@ -190,9 +194,10 @@
             const now = new Date();
             simRecords[idx].date = now.toLocaleString('zh-HK', { timeZone: 'Asia/Hong_Kong', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
         }
+        function generateInitial() { return Array.from({length:30}, (_,i)=>({id:"M"+(i+1).toString().padStart(2,'0'), telco:"---", remains:"---", expiry:"---", location:"---", staff:"---", date:"---"})); }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
         function toggleLoader(s) { document.getElementById('loader').style.display = s ? 'flex' : 'none'; }
-        async function resetAll() { if (confirm("⚠️ 注意：這將清除雲端所有資料！")) { simRecords = []; setDirty(true); uploadData(); } }
+        async function resetAll() { if (confirm("⚠️ 注意：這將清除雲端所有資料！")) { simRecords = generateInitial(); setDirty(true); await uploadData(); } }
     </script>
 </body>
 </html>
