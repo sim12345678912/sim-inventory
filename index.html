@@ -62,11 +62,13 @@
                     <th style="text-align:center">操作</th>
                 </tr>
             </thead>
-            <tbody id="simTable"></tbody>
+            <tbody id="simTable">
+                <tr><td colspan="8" style="text-align:center; padding:50px; color:#94a3b8;">正在初始化...如果畫面長時間沒反應，請點擊上方【⚠️ 全部重置】</td></tr>
+            </tbody>
         </table>
     </div>
 
-    <!-- 領取彈窗 -->
+    <!-- 大彈窗 -->
     <div id="editModal" class="modal">
         <div class="modal-content">
             <h2 id="modalTitle" style="margin-top:0;">編輯領取資訊</h2>
@@ -90,8 +92,8 @@
     </div>
 
     <script>
-        // ★ 已填入你剛才截圖確認成功的最新網址
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbynQ42b5u2iRmbyEZm85D_ixt9ME008PDRCO73Yfk_4cWc5uY4wiqMz9p4Zs88_0wsS/exec"; 
+        // ★ 使用你最新的 GAS URL
+        const GAS_URL = "https://google.com"; 
 
         const userList = ["Leo", "Mason", "Mayce", "Sherman", "ting ting", "Jenna", "Roy", "Arron", "solar", "Willam", "hanson"];
         const telcoList = ["CSL", "3HK", "SmarTone", "CMHK", "Lucky SIM"];
@@ -115,26 +117,29 @@
         };
 
         async function loadData() {
-            if(isDirty && !confirm("尚有修改未儲存，確定刷新？")) return;
+            if(isDirty && !confirm("尚有修改未儲存，刷新會遺失？")) return;
             toggleLoader(true);
             try {
-                const res = await fetch(GAS_URL);
+                // 加上時間戳防止瀏覽器快取
+                const res = await fetch(GAS_URL + "?t=" + new Date().getTime());
                 const data = await res.json();
-                simRecords = (data && data.length > 0) ? data : generateInitial();
+                simRecords = (Array.isArray(data) && data.length > 0) ? data : generateInitial();
                 setDirty(false);
                 render();
             } catch(e) { 
-                alert("連線成功但讀取異常，請按【全部重置】初始化雲端資料！"); 
+                console.error(e);
+                // 如果是新表格完全沒數據，先生成初始數據
+                simRecords = generateInitial();
+                render();
             }
             toggleLoader(false);
         }
 
         async function uploadData() {
-            if(!isDirty) { alert("目前已是最新狀態"); return; }
             toggleLoader(true);
             try {
                 await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(simRecords) });
-                setTimeout(() => { setDirty(false); loadData(); alert("雲端同步完成！"); }, 1200);
+                setTimeout(() => { setDirty(false); loadData(); alert("同步完成！"); }, 1500);
             } catch(e) { alert("同步失敗"); toggleLoader(false); }
         }
 
@@ -195,7 +200,15 @@
         function generateInitial() { return Array.from({length:30}, (_,i)=>({id:"M"+(i+1).toString().padStart(2,'0'), telco:"---", remains:"---", expiry:"---", location:"---", staff:"---", date:"---"})); }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
         function toggleLoader(s) { document.getElementById('loader').style.display = s ? 'flex' : 'none'; }
-        async function resetAll() { if (confirm("⚠️ 注意：這將清除雲端所有資料！")) { simRecords = generateInitial(); setDirty(true); await uploadData(); } }
+        
+        // 修改後的重置邏輯：強制推送到雲端
+        async function resetAll() { 
+            if (confirm("⚠️ 此動作將初始化所有卡片。如果這是你第一次使用，請務必點擊確定！")) { 
+                simRecords = generateInitial(); 
+                setDirty(true); 
+                await uploadData(); 
+            } 
+        }
     </script>
 </body>
 </html>
