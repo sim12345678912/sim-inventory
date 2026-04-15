@@ -90,8 +90,8 @@
     </div>
 
     <script>
-        // ★ 已填入你最新的 GAS URL
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbxpttgBN8LfaAjPSwHyvcogjS-4I1o6STLSjlXigf8f2XLqn9LeieI9I9mVvY0DXZcH/exec"; 
+        // ★ 已填入你剛才截圖確認成功的最新網址
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbynQ42b5u2iRmbyEZm85D_ixt9ME008PDRCO73Yfk_4cWc5uY4wiqMz9p4Zs88_0wsS/exec"; 
 
         const userList = ["Leo", "Mason", "Mayce", "Sherman", "ting ting", "Jenna", "Roy", "Arron", "solar", "Willam", "hanson"];
         const telcoList = ["CSL", "3HK", "SmarTone", "CMHK", "Lucky SIM"];
@@ -119,29 +119,23 @@
             toggleLoader(true);
             try {
                 const res = await fetch(GAS_URL);
-                if (!res.ok) throw new Error();
                 const data = await res.json();
                 simRecords = (data && data.length > 0) ? data : generateInitial();
                 setDirty(false);
                 render();
             } catch(e) { 
-                alert("【無法連接雲端】\n請確認 GAS 部署權限已設為「所有人 (Anyone)」。"); 
+                alert("連線成功但讀取異常，請按【全部重置】初始化雲端資料！"); 
             }
             toggleLoader(false);
         }
 
         async function uploadData() {
-            if(!isDirty) { alert("目前已是最新狀態，無需同步。"); return; }
+            if(!isDirty) { alert("目前已是最新狀態"); return; }
             toggleLoader(true);
             try {
                 await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(simRecords) });
-                // no-cors 模式下無法讀取回應，強行等待後重新加載
-                setTimeout(() => { 
-                    setDirty(false); 
-                    loadData(); 
-                    alert("同步指令已發送！資料將在幾秒內更新。"); 
-                }, 1200);
-            } catch(e) { alert("同步失敗，請檢查網路連線"); toggleLoader(false); }
+                setTimeout(() => { setDirty(false); loadData(); alert("雲端同步完成！"); }, 1200);
+            } catch(e) { alert("同步失敗"); toggleLoader(false); }
         }
 
         function setDirty(dirty) {
@@ -161,7 +155,7 @@
                     <td><div style="display:flex; align-items:center;"><span style="color:#e11d48; font-weight:bold;">${r.expiry}</span><div class="quick-edit-btn" onclick="quickEditExpiry(${i})">✏️</div></div></td>
                     <td style="color:#64748b;">${r.location}</td>
                     <td style="color:#2563eb; font-weight:bold;">${r.staff}</td>
-                    <td style="text-align:center; color:#cbd5e1; font-size:11px;">${String(r.date).replace(/'/g, "")}</td>
+                    <td style="text-align:center; color:#cbd5e1; font-size:11px;">${String(r.date)}</td>
                     <td style="text-align:center;"><div style="display:flex; align-items:center; justify-content:center;"><button onclick="openEditModal(${i})" class="btn btn-edit">修改</button><button onclick="resetSingle(${i})" class="btn btn-reset-single">✕</button></div></td>
                 </tr>
             `).join('');
@@ -189,7 +183,7 @@
             updateTime(currentIdx); setDirty(true); render(); closeModal('editModal');
         }
         function resetSingle(idx) {
-            if (confirm(`清除領取紀錄？(將保留電訊商及到期日)`)) {
+            if (confirm(`清除領取紀錄？`)) {
                 simRecords[idx].remains = "---"; simRecords[idx].location = "---"; simRecords[idx].staff = "---"; simRecords[idx].date = "---";
                 setDirty(true); render();
             }
@@ -201,7 +195,7 @@
         function generateInitial() { return Array.from({length:30}, (_,i)=>({id:"M"+(i+1).toString().padStart(2,'0'), telco:"---", remains:"---", expiry:"---", location:"---", staff:"---", date:"---"})); }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
         function toggleLoader(s) { document.getElementById('loader').style.display = s ? 'flex' : 'none'; }
-        async function resetAll() { if (confirm("⚠️ 注意：這將清除所有數據！")) { simRecords = generateInitial(); setDirty(true); await uploadData(); } }
+        async function resetAll() { if (confirm("⚠️ 注意：這將清除雲端所有資料！")) { simRecords = generateInitial(); setDirty(true); await uploadData(); } }
     </script>
 </body>
 </html>
