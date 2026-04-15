@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIM 雲端管理系統 - 最終同步版</title>
+    <title>SIM 雲端管理系統 - 最終完美同步版</title>
     <style>
         body { font-family: sans-serif; background-color: #f1f5f9; padding: 20px; color: #334155; margin: 0; }
         .container { max-width: 1200px; margin: 0 auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
@@ -89,7 +89,7 @@
 
     <script>
         // ★ 已更新為你最新的 GAS URL
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbxK-pendcSoN_dJz72x_WJkZW5LUrLbNMJ4Y8GvN2PxiZPZBOmTELj58P5RSWL2DNg_/exec"; 
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbz-wJrshk8I1aHfpSWdf55WObbOlKnnhP6D6q4ObxjAnjat3itVbnaN3NCch1Cmpec5/exec"; 
 
         const userList = ["Leo", "Mason", "Mayce", "Sherman", "ting ting", "Jenna", "Roy", "Arron", "solar", "Willam", "hanson"];
         const telcoList = ["CSL", "3HK", "SmarTone", "CMHK", "Lucky SIM"];
@@ -131,7 +131,6 @@
 
         function render() {
             const tbody = document.getElementById('simTable');
-            // 渲染時移除可能存在的單引號顯示
             tbody.innerHTML = simRecords.map((r, i) => `
                 <tr>
                     <td style="text-align:center; font-weight:bold; color:#cbd5e1;">${r.id}</td>
@@ -140,7 +139,7 @@
                     <td><div style="display:flex; align-items:center;"><span style="color:#e11d48; font-weight:bold;">${r.expiry}</span><div class="quick-edit-btn" onclick="quickEditExpiry(${i})">✏️</div></div></td>
                     <td style="color:#64748b;">${r.location}</td>
                     <td style="color:#2563eb; font-weight:bold;">${r.staff}</td>
-                    <td style="text-align:center; color:#cbd5e1; font-size:11px;">${String(r.date).replace(/'/g, "")}</td>
+                    <td style="text-align:center; color:#cbd5e1; font-size:11px;">${r.date}</td>
                     <td style="text-align:center;"><div style="display:flex; align-items:center; justify-content:center;"><button onclick="openEditModal(${i})" class="btn btn-edit">修改</button><button onclick="resetSingle(${i})" class="btn btn-reset-single">✕</button></div></td>
                 </tr>
             `).join('');
@@ -173,8 +172,8 @@
                 uploadData();
             }
         }
-        
-        // 強制香港時間修正版
+
+        // 強制香港時間修正函數
         function updateTime(idx) { 
             const now = new Date();
             const hkTime = now.toLocaleString('zh-HK', {
@@ -185,13 +184,13 @@
                 minute: '2-digit',
                 hour12: false
             });
-            // 加上單引號防止試算表自動轉換為日期物件
-            simRecords[idx].date = "'" + hkTime; 
+            // 這裡不再加單引號，交由後端 GAS 的 setNumberFormat("@") 處理格式
+            simRecords[idx].date = hkTime; 
         }
-        
+
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
         function toggleLoader(s) { document.getElementById('loader').style.display = s ? 'flex' : 'none'; }
-        async function resetAll() { if (confirm("⚠️ 清除所有雲端資料？")) { simRecords = []; uploadData(); } }
+        async function resetAll() { if (confirm("⚠️ 注意：這將清除雲端所有資料，確定嗎？")) { simRecords = []; uploadData(); } }
     </script>
 </body>
 </html>
