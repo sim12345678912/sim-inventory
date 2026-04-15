@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIM 雲端管理系統 - 最終完美同步版</title>
+    <title>SIM 雲端管理系統 - 批量同步版</title>
     <style>
         body { font-family: sans-serif; background-color: #f1f5f9; padding: 20px; color: #334155; margin: 0; }
         .container { max-width: 1200px; margin: 0 auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
@@ -12,12 +12,18 @@
         th { background: #1e293b; color: white; padding: 14px; text-align: left; }
         td { padding: 14px; border-bottom: 1px solid #e2e8f0; }
         tr:hover { background-color: #f8fafc; }
-        .btn { padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; border: none; transition: 0.2s; }
+        .btn { padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; border: none; transition: 0.2s; display: inline-flex; align-items: center; }
         .btn-edit { background: #334155; color: white; }
         .btn-reset-single { background: none; color: #cbd5e1; font-size: 18px; padding: 0 10px; border:none; cursor:pointer; }
         .btn-reset-single:hover { color: #ef4444; }
+        
+        /* 頂部按鈕樣式 */
         .btn-refresh { background: #e2e8f0; color: #475569; margin-right: 10px; }
-        .btn-reset-all { background: #fee2e2; color: #dc2626; margin-left: 10px; }
+        .btn-sync { background: #cbd5e1; color: #64748b; margin-right: 10px; }
+        .btn-sync.dirty { background: #10b981; color: white; box-shadow: 0 0 12px rgba(16, 185, 129, 0.4); animation: pulse 2s infinite; }
+        .btn-reset-all { background: #fee2e2; color: #dc2626; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
         
         .quick-edit-btn { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin-left: 8px; background: #f1f5f9; border-radius: 6px; cursor: pointer; color: #94a3b8; font-size: 10px; vertical-align: middle; border: 1px solid #e2e8f0; }
         .quick-edit-btn:hover { background: #3b82f6; color: white; border-color: #3b82f6; }
@@ -41,9 +47,10 @@
     <div class="container">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h1>SIM <span style="color:#3b82f6">Cloud</span></h1>
-            <div>
-                <button onclick="loadData()" class="btn btn-refresh">🔄 刷新數據</button>
-                <button onclick="resetAll()" class="btn btn-reset-all">⚠️ 全部清空</button>
+            <div style="display: flex; align-items: center;">
+                <button onclick="loadData()" class="btn btn-refresh" title="從雲端抓取最新資料">🔄 重新整理</button>
+                <button onclick="uploadData()" id="syncBtn" class="btn btn-sync">💾 儲存並同步</button>
+                <button onclick="resetAll()" class="btn btn-reset-all">⚠️ 重置</button>
             </div>
         </div>
 
@@ -64,7 +71,6 @@
         </table>
     </div>
 
-    <!-- 修改大彈窗 -->
     <div id="editModal" class="modal">
         <div class="modal-content">
             <h2 id="modalTitle" style="margin-top:0;">編輯領取資訊</h2>
@@ -73,12 +79,11 @@
             <div class="form-group"><label>提取人員</label><select id="selectStaff" style="background:#eff6ff; color:#1d4ed8;"></select></div>
             <div style="display: flex; gap: 10px; margin-top: 25px;">
                 <button onclick="closeModal('editModal')" class="btn" style="flex:1; background:#f1f5f9; color:#64748b;">取消</button>
-                <button onclick="confirmSave()" class="btn" style="flex:1; background:#2563eb; color:white;">儲存並同步</button>
+                <button onclick="confirmSave()" class="btn" style="flex:1; background:#2563eb; color:white;">本地確認</button>
             </div>
         </div>
     </div>
 
-    <!-- 電訊商選擇彈窗 -->
     <div id="telcoModal" class="modal">
         <div class="modal-content">
             <h2 style="margin-top:0;">選擇電訊商</h2>
@@ -88,13 +93,13 @@
     </div>
 
     <script>
-        // ★ 已更新為你最新的 GAS URL
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbz-wJrshk8I1aHfpSWdf55WObbOlKnnhP6D6q4ObxjAnjat3itVbnaN3NCch1Cmpec5/exec"; 
+        const GAS_URL = "https://google.com"; 
 
         const userList = ["Leo", "Mason", "Mayce", "Sherman", "ting ting", "Jenna", "Roy", "Arron", "solar", "Willam", "hanson"];
         const telcoList = ["CSL", "3HK", "SmarTone", "CMHK", "Lucky SIM"];
         let simRecords = [];
         let currentIdx = null;
+        let isDirty = false; // 是否有未同步的修改
 
         window.onload = function() {
             const staffSelect = document.getElementById('selectStaff');
@@ -110,23 +115,39 @@
             loadData();
         };
 
+        // 從雲端抓資料
         async function loadData() {
+            if(isDirty && !confirm("尚有未同步的修改，重新整理將會遺失這些修改。確定嗎？")) return;
             toggleLoader(true);
             try {
                 const res = await fetch(GAS_URL);
                 simRecords = await res.json();
                 if(!simRecords || simRecords.length === 0) simRecords = Array.from({length:30}, (_,i)=>({id:"M"+(i+1).toString().padStart(2,'0'), telco:"---", remains:"---", expiry:"---", location:"---", staff:"---", date:"---"}));
+                setDirty(false);
                 render();
-            } catch(e) { console.error(e); }
+            } catch(e) { alert("連線失敗"); }
             toggleLoader(false);
         }
 
+        // 把資料推到雲端
         async function uploadData() {
+            if(!isDirty) { alert("目前資料已是最新狀態，無需同步。"); return; }
             toggleLoader(true);
             try {
                 await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(simRecords) });
-                setTimeout(loadData, 1500);
+                setTimeout(() => {
+                    setDirty(false);
+                    loadData();
+                    alert("同步成功！");
+                }, 1000);
             } catch(e) { alert("同步失敗"); toggleLoader(false); }
+        }
+
+        function setDirty(dirty) {
+            isDirty = dirty;
+            const btn = document.getElementById('syncBtn');
+            if(dirty) btn.classList.add('dirty');
+            else btn.classList.remove('dirty');
         }
 
         function render() {
@@ -139,17 +160,20 @@
                     <td><div style="display:flex; align-items:center;"><span style="color:#e11d48; font-weight:bold;">${r.expiry}</span><div class="quick-edit-btn" onclick="quickEditExpiry(${i})">✏️</div></div></td>
                     <td style="color:#64748b;">${r.location}</td>
                     <td style="color:#2563eb; font-weight:bold;">${r.staff}</td>
-                    <td style="text-align:center; color:#cbd5e1; font-size:11px;">${r.date}</td>
+                    <td style="text-align:center; color:#cbd5e1; font-size:11px;">${String(r.date).replace(/'/g, "")}</td>
                     <td style="text-align:center;"><div style="display:flex; align-items:center; justify-content:center;"><button onclick="openEditModal(${i})" class="btn btn-edit">修改</button><button onclick="resetSingle(${i})" class="btn btn-reset-single">✕</button></div></td>
                 </tr>
             `).join('');
         }
 
         function openTelcoModal(idx) { currentIdx = idx; document.getElementById('telcoModal').style.display = 'flex'; }
-        function selectTelco(val) { simRecords[currentIdx].telco = val; updateTime(currentIdx); uploadData(); closeModal('telcoModal'); }
+        function selectTelco(val) { 
+            simRecords[currentIdx].telco = val; 
+            updateTime(currentIdx); setDirty(true); render(); closeModal('telcoModal'); 
+        }
         function quickEditExpiry(idx) { 
             const val = prompt(`輸入 ${simRecords[idx].id} 到期日:`, simRecords[idx].expiry === "---" ? "" : simRecords[idx].expiry);
-            if (val !== null) { simRecords[idx].expiry = val.trim() || "---"; updateTime(idx); uploadData(); }
+            if (val !== null) { simRecords[idx].expiry = val.trim() || "---"; updateTime(idx); setDirty(true); render(); }
         }
         function openEditModal(idx) {
             currentIdx = idx; const r = simRecords[idx];
@@ -159,38 +183,26 @@
             document.getElementById('selectStaff').value = r.staff;
             document.getElementById('editModal').style.display = 'flex';
         }
-        async function confirmSave() {
+        function confirmSave() {
             const r = simRecords[currentIdx];
             r.remains = document.getElementById('inputUsageVal').value.trim() || "---";
             r.location = document.getElementById('inputLoc').value.trim() || "---";
             r.staff = document.getElementById('selectStaff').value;
-            updateTime(currentIdx); closeModal('editModal'); uploadData();
+            updateTime(currentIdx); setDirty(true); render(); closeModal('editModal');
         }
         function resetSingle(idx) {
             if (confirm(`清除領取紀錄？`)) {
                 simRecords[idx].remains = "---"; simRecords[idx].location = "---"; simRecords[idx].staff = "---"; simRecords[idx].date = "---";
-                uploadData();
+                setDirty(true); render();
             }
         }
-
-        // 強制香港時間修正函數
         function updateTime(idx) { 
             const now = new Date();
-            const hkTime = now.toLocaleString('zh-HK', {
-                timeZone: 'Asia/Hong_Kong',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-            });
-            // 這裡不再加單引號，交由後端 GAS 的 setNumberFormat("@") 處理格式
-            simRecords[idx].date = hkTime; 
+            simRecords[idx].date = now.toLocaleString('zh-HK', { timeZone: 'Asia/Hong_Kong', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
         }
-
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
         function toggleLoader(s) { document.getElementById('loader').style.display = s ? 'flex' : 'none'; }
-        async function resetAll() { if (confirm("⚠️ 注意：這將清除雲端所有資料，確定嗎？")) { simRecords = []; uploadData(); } }
+        async function resetAll() { if (confirm("⚠️ 注意：這將清除雲端所有資料！")) { simRecords = []; setDirty(true); uploadData(); } }
     </script>
 </body>
 </html>
