@@ -3,73 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIM 雲端管理系統 - 批量同步增強版</title>
+    <title>SIM 雲端管理系統 - 最終批量同步版</title>
     <style>
         body { font-family: sans-serif; background-color: #f1f5f9; padding: 20px; color: #334155; margin: 0; }
         .container { max-width: 1250px; margin: 0 auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
-        
         .header-box { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
         h1 { color: #1e293b; margin: 0; font-size: 28px; }
-        .button-group { display: flex; gap: 10px; }
-
+        
         /* 數據看板 */
         .dashboard { display: flex; gap: 15px; margin-bottom: 20px; }
         .stat-card { background: #f8fafc; padding: 10px 20px; border-radius: 12px; border: 1px solid #e2e8f0; flex: 1; text-align: center; }
-        .stat-card .label { font-size: 11px; color: #64748b; font-weight: bold; text-transform: uppercase; }
+        .stat-card .label { font-size: 11px; color: #64748b; font-weight: bold; }
         .stat-card .value { font-size: 22px; font-weight: 900; color: #1e293b; }
 
-        /* 工具列：搜尋與批量 */
+        /* 工具列 */
         .tool-bar { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; background: #f8fafc; padding: 10px 15px; border-radius: 12px; }
         .search-box { flex: 1; max-width: 300px; padding: 10px 15px; border: 2px solid #e2e8f0; border-radius: 10px; outline: none; transition: 0.3s; }
-        .search-box:focus { border-color: #3b82f6; background: white; }
-
+        
         /* 按鈕樣式 */
         .btn { padding: 10px 18px; border-radius: 10px; cursor: pointer; font-weight: bold; border: none; transition: 0.3s; font-size: 13px; display: inline-flex; align-items: center; gap: 5px; }
         .btn-refresh { background: #e2e8f0; color: #475569; }
         .btn-sync { background: #f59e0b; color: white; }
         .btn-sync.dirty { background: #10b981 !important; box-shadow: 0 0 15px rgba(16, 185, 129, 0.6); animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
-        
-        .btn-batch { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; display: none; } /* 預設隱藏 */
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        .btn-batch { background: #fee2e2; color: #dc2626; display: none; }
         .btn-reset-all { background: #334155; color: white; }
 
-        .btn-edit { background: #334155; color: white; padding: 6px 10px; font-size: 12px; }
-        .btn-reset-single { background: none; color: #cbd5e1; font-size: 18px; border:none; cursor:pointer; padding: 0 5px; }
-        .btn-reset-single:hover { color: #ef4444; }
-
-        /* 表格與標籤 */
+        /* 表格樣式 */
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        th { background: #1e293b; color: #94a3b8; padding: 15px 10px; text-align: left; font-size: 11px; text-transform: uppercase; }
+        th { background: #1e293b; color: #94a3b8; padding: 15px 10px; text-align: left; font-size: 11px; }
         td { padding: 12px 10px; border-bottom: 1px solid #f1f5f9; }
-        tr:hover { background-color: #f8fafc; }
         tr.selected { background-color: #eff6ff; }
         
         .checkbox-cell { width: 40px; text-align: center; }
-        input[type="checkbox"] { transform: scale(1.2); cursor: pointer; }
+        input[type="checkbox"] { transform: scale(1.3); cursor: pointer; }
 
         .badge { padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 900; }
         .badge-stock { background: #dcfce7; color: #166534; }
         .badge-used { background: #dbeafe; color: #1e40af; }
-        
         .expiry-warning { color: #f59e0b; font-weight: bold; }
         .expiry-danger { color: #ef4444; font-weight: bold; text-decoration: underline; }
 
         .quick-edit-btn { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; margin-left: 5px; background: #f1f5f9; border-radius: 5px; cursor: pointer; color: #94a3b8; font-size: 10px; border: 1px solid #e2e8f0; }
-        
         #loader { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); color: white; z-index: 3000; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; }
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 2000; backdrop-filter: blur(4px); }
-        .modal-content { background: white; padding: 30px; border-radius: 20px; width: 90%; max-width: 400px; box-shadow: 0 25px 50px rgba(0,0,0,0.2); }
-        input, select { width: 100%; padding: 10px; border: 2px solid #f1f5f9; border-radius: 10px; box-sizing: border-box; font-weight: bold; outline: none; margin-top: 5px; margin-bottom: 15px; }
+        .modal-content { background: white; padding: 30px; border-radius: 20px; width: 90%; max-width: 400px; }
+        input, select { width: 100%; padding: 10px; border: 2px solid #f1f5f9; border-radius: 10px; margin-bottom: 15px; }
         .telco-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
         .telco-btn { padding: 12px; border: 2px solid #f1f5f9; border-radius: 10px; background: #fff; cursor: pointer; font-weight: bold; text-align: center; }
     </style>
 </head>
 <body>
 
-    <div id="loader">請稍候，正在處理雲端數據...</div>
+    <div id="loader">同步中，請稍後...</div>
 
     <div class="container">
-        <!-- 數據看板 -->
         <div class="dashboard">
             <div class="stat-card"><div class="label">總卡片</div><div id="statTotal" class="value">0</div></div>
             <div class="stat-card"><div class="label">在庫</div><div id="statInStock" class="value" style="color:#10b981">0</div></div>
@@ -87,7 +75,7 @@
         </div>
 
         <div class="tool-bar">
-            <input type="text" id="searchInput" class="search-box" placeholder="🔍 搜尋編號、電訊商、人員..." oninput="render()">
+            <input type="text" id="searchInput" class="search-box" placeholder="🔍 搜尋..." oninput="render()">
             <button onclick="batchReset()" id="batchBtn" class="btn btn-batch">🧹 清除選中項目 (<span id="selectCount">0</span>)</button>
         </div>
 
@@ -98,11 +86,11 @@
                     <th style="text-align:center; width:60px;">編號</th>
                     <th>狀態</th>
                     <th>電訊商</th>
-                    <th>剩餘用量</th>
+                    <th>用量</th>
                     <th>到期日</th>
                     <th>地點</th>
-                    <th>提取人員</th>
-                    <th style="text-align:center">最後更新</th>
+                    <th>人員</th>
+                    <th style="text-align:center">更新</th>
                     <th style="text-align:center">操作</th>
                 </tr>
             </thead>
@@ -110,25 +98,26 @@
         </table>
     </div>
 
-    <!-- 彈窗區 -->
+    <!-- 編輯彈窗 -->
     <div id="editModal" class="modal">
         <div class="modal-content">
-            <h2 id="modalTitle" style="margin-top:0;">編輯領取資訊</h2>
-            <label style="font-size:11px; font-weight:bold; color:#94a3b8;">剩餘用量</label><input type="text" id="inputUsageVal">
-            <label style="font-size:11px; font-weight:bold; color:#94a3b8;">存放地點</label><input type="text" id="inputLoc">
-            <label style="font-size:11px; font-weight:bold; color:#94a3b8;">提取人員</label><select id="selectStaff" style="background:#eff6ff; color:#1d4ed8;"></select>
-            <div style="display: flex; gap: 10px; margin-top: 10px;">
-                <button onclick="closeModal('editModal')" class="btn" style="flex:1; background:#f1f5f9; color:#64748b;">取消</button>
+            <h2 id="modalTitle" style="margin-top:0;">編輯資訊</h2>
+            <label>剩餘用量</label><input type="text" id="inputUsageVal">
+            <label>存放地點</label><input type="text" id="inputLoc">
+            <label>提取人員</label><select id="selectStaff" style="background:#eff6ff; color:#1d4ed8;"></select>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="closeModal('editModal')" class="btn" style="flex:1; background:#f1f5f9;">取消</button>
                 <button onclick="confirmSave()" class="btn" style="flex:1; background:#2563eb; color:white;">本地確認</button>
             </div>
         </div>
     </div>
 
+    <!-- 電訊商彈窗 -->
     <div id="telcoModal" class="modal">
         <div class="modal-content">
             <h2 style="margin-top:0;">選擇電訊商</h2>
             <div class="telco-grid" id="telcoBtnGroup"></div>
-            <button onclick="closeModal('telcoModal')" class="btn" style="width:100%; margin-top:20px; background:#f1f5f9; color:#64748b;">關閉</button>
+            <button onclick="closeModal('telcoModal')" class="btn" style="width:100%; margin-top:20px;">關閉</button>
         </div>
     </div>
 
@@ -153,40 +142,35 @@
                 btnGroup.appendChild(btn);
             });
             let otherBtn = document.createElement('div'); otherBtn.className = 'telco-btn'; otherBtn.innerText = '➕ 其他';
-            otherBtn.style.color = '#3b82f6';
-            otherBtn.onclick = () => { let c = prompt("輸入電訊商:"); if(c) { simRecords[currentIdx].telco = c; updateTime(currentIdx); setDirty(true); render(); closeModal('telcoModal'); } };
+            otherBtn.onclick = () => { let c = prompt("電訊商:"); if(c) { simRecords[currentIdx].telco = c; updateTime(currentIdx); setDirty(true); render(); closeModal('telcoModal'); } };
             btnGroup.appendChild(otherBtn);
             loadData();
         };
 
         async function loadData() {
-            if(isDirty && !confirm("尚有修改未同步，刷新會遺失修改，確定？")) return;
+            if(isDirty && !confirm("尚未儲存，刷新會遺失？")) return;
             toggleLoader(true);
             try {
                 const res = await fetch(GAS_URL + "?t=" + new Date().getTime());
                 const data = await res.json();
                 simRecords = (Array.isArray(data) && data.length > 0) ? data : generateInitial();
-                setDirty(false);
-                selectedIndices.clear();
-                render();
+                setDirty(false); selectedIndices.clear(); render();
             } catch(e) { simRecords = generateInitial(); render(); }
             toggleLoader(false);
         }
 
         async function uploadData() {
-            if(!isDirty) { alert("目前資料已是最新，無需同步。"); return; }
+            if(!isDirty) { alert("無須同步"); return; }
             toggleLoader(true);
             try {
-                // 發送當前本地最新的 simRecords
+                // 發送本地資料
                 await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(simRecords) });
                 
-                // 重要：no-cors 模式下，我們不依賴伺服器回傳，直接等一下後標記為乾淨
-                setTimeout(() => {
-                    setDirty(false);
-                    alert("同步指令已發送！雲端更新大約需要 2-3 秒。");
-                    toggleLoader(false);
-                }, 1000);
-            } catch(e) { alert("同步失敗，請檢查網路。"); toggleLoader(false); }
+                // 停止自動刷新 loadData()，保留用戶輸入
+                setDirty(false);
+                alert("✅ 資料已發送至雲端儲存！");
+            } catch(e) { alert("同步失敗"); }
+            toggleLoader(false);
         }
 
         function setDirty(dirty) {
@@ -197,9 +181,7 @@
         function toggleSelectAll() {
             const isChecked = document.getElementById('selectAll').checked;
             selectedIndices.clear();
-            if (isChecked) {
-                simRecords.forEach((_, i) => selectedIndices.add(i));
-            }
+            if (isChecked) simRecords.forEach((_, i) => selectedIndices.add(i));
             render();
         }
 
@@ -209,22 +191,20 @@
             render();
         }
 
-        function resetAllRecords() {
-            if (confirm("⚠️ 確定重設【所有卡片】的領取紀錄嗎？\n(電訊商及到期日將保留)")) {
-                simRecords.forEach(r => { r.remains = "---"; r.location = "---"; r.staff = "---"; r.date = "---"; r.usage = "在庫"; });
-                setDirty(true); render();
+        function batchReset() {
+            if (selectedIndices.size === 0) return;
+            if (confirm(`確定清空選中的 ${selectedIndices.size} 項領取紀錄？`)) {
+                selectedIndices.forEach(idx => {
+                    simRecords[idx].remains = "---"; simRecords[idx].location = "---";
+                    simRecords[idx].staff = "---"; simRecords[idx].date = "---"; simRecords[idx].usage = "在庫";
+                });
+                selectedIndices.clear(); setDirty(true); render();
             }
         }
 
-        function batchReset() {
-            if (selectedIndices.size === 0) return;
-            if (confirm(`確定重設選中的 ${selectedIndices.size} 項領取紀錄嗎？`)) {
-                selectedIndices.forEach(idx => {
-                    simRecords[idx].remains = "---"; simRecords[idx].location = "---";
-                    simRecords[idx].staff = "---"; simRecords[idx].date = "---";
-                    simRecords[idx].usage = "在庫";
-                });
-                selectedIndices.clear();
+        function resetAllRecords() {
+            if (confirm("⚠️ 確定重設所有領取紀錄？")) {
+                simRecords.forEach(r => { r.remains = "---"; r.location = "---"; r.staff = "---"; r.date = "---"; r.usage = "在庫"; });
                 setDirty(true); render();
             }
         }
@@ -238,36 +218,29 @@
             tbody.innerHTML = simRecords.map((r, i) => {
                 const isMatch = r.id.toLowerCase().includes(keyword) || r.telco.toLowerCase().includes(keyword) || r.staff.toLowerCase().includes(keyword);
                 if (!isMatch) return "";
-
                 const isUsed = r.staff !== "---";
                 if(isUsed) counts.used++; else counts.stock++;
-                
-                let expiryClass = "";
+                let expClass = "";
                 if (r.expiry !== "---" && r.expiry.includes("/")) {
-                    const expDate = new Date(r.expiry);
-                    const diffDays = (expDate - now) / (1000 * 60 * 60 * 24);
-                    if (diffDays < 0) expiryClass = "expiry-danger";
-                    else if (diffDays <= 30) { expiryClass = "expiry-warning"; counts.warning++; }
+                    const diff = (new Date(r.expiry) - now) / 86400000;
+                    if (diff < 0) expClass = "expiry-danger"; else if (diff <= 30) { expClass = "expiry-warning"; counts.warning++; }
                 }
-
                 const isChecked = selectedIndices.has(i);
-
                 return `
                 <tr class="${isChecked ? 'selected' : ''}">
                     <td class="checkbox-cell"><input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleItem(${i})"></td>
                     <td style="text-align:center; font-weight:bold; color:#cbd5e1;">${r.id}</td>
                     <td><span class="badge ${isUsed ? 'badge-used' : 'badge-stock'}">${isUsed ? '已領用' : '在庫'}</span></td>
-                    <td><div style="display:flex; align-items:center;"><span style="font-weight:bold;">${r.telco}</span><div class="quick-edit-btn" onclick="currentIdx=${i}; document.getElementById('telcoModal').style.display='flex';">✏️</div></div></td>
-                    <td><span style="background:#f1f5f9; padding:3px 8px; border-radius:6px; font-size:12px; font-weight:bold;">${r.remains}</span></td>
-                    <td><div style="display:flex; align-items:center;"><span class="${expiryClass}">${r.expiry}</span><div class="quick-edit-btn" onclick="quickEditExpiry(${i})">✏️</div></div></td>
-                    <td style="color:#64748b;">${r.location}</td>
+                    <td><div style="display:flex; align-items:center;"><b>${r.telco}</b><div class="quick-edit-btn" onclick="currentIdx=${i}; document.getElementById('telcoModal').style.display='flex';">✏️</div></div></td>
+                    <td>${r.remains}</td>
+                    <td><div style="display:flex; align-items:center;"><span class="${expClass}">${r.expiry}</span><div class="quick-edit-btn" onclick="quickEditExpiry(${i})">✏️</div></div></td>
+                    <td>${r.location}</td>
                     <td style="color:#2563eb; font-weight:bold;">${r.staff}</td>
-                    <td style="text-align:center; color:#cbd5e1; font-size:11px;">${String(r.date)}</td>
-                    <td style="text-align:center;"><div style="display:flex; align-items:center; justify-content:center;"><button onclick="openEditModal(${i})" class="btn btn-edit">修改</button><button onclick="resetSingle(${i})" class="btn btn-reset-single">✕</button></div></td>
+                    <td style="font-size:10px; color:#cbd5e1;">${r.date}</td>
+                    <td style="text-align:center;"><div style="display:flex; gap:5px; justify-content:center;"><button onclick="openEditModal(${i})" class="btn btn-edit">改</button><button onclick="resetSingle(${i})" class="btn btn-reset-single">✕</button></div></td>
                 </tr>`;
             }).join('');
 
-            // 更新 UI
             document.getElementById('batchBtn').style.display = selectedIndices.size > 0 ? 'inline-flex' : 'none';
             document.getElementById('selectCount').innerText = selectedIndices.size;
             document.getElementById('statTotal').innerText = counts.total;
@@ -277,7 +250,7 @@
         }
 
         function quickEditExpiry(idx) { 
-            const val = prompt(`輸入 ${simRecords[idx].id} 到期日 (YYYY/MM/DD):`, simRecords[idx].expiry === "---" ? "" : simRecords[idx].expiry);
+            const val = prompt(`輸入 ${simRecords[idx].id} 到期日:`, simRecords[idx].expiry === "---" ? "" : simRecords[idx].expiry);
             if (val !== null) { simRecords[idx].expiry = val.trim() || "---"; updateTime(idx); setDirty(true); render(); }
         }
         function openEditModal(idx) {
