@@ -84,7 +84,7 @@
             <input type="text" id="searchInput" class="search-box" placeholder="🔍 搜尋 ID、人員或電訊商..." oninput="render()">
             <div id="batchTools" class="batch-btn-group">
                 <button onclick="openBatchEdit()" class="btn btn-batch-edit">📝 批量修改 (<span id="selectCount">0</span>)</button>
-                <button onclick="batchReset()" class="btn btn-batch-reset">🧹 批量重設</button>
+                <button onclick="batchReset()" class="btn btn-batch-reset">🧹 批量清除領取</button>
             </div>
         </div>
 
@@ -107,7 +107,7 @@
         </table>
     </div>
 
-    <!-- 批量修改彈窗 (僅保留用量、地點、人員) -->
+    <!-- 批量修改彈窗 (僅保留 3 項：用量、地點、提取人員) -->
     <div id="batchEditModal" class="modal">
         <div class="modal-content">
             <h2 style="margin-top:0;">批量修改 <span id="batchCountText" style="color:#3b82f6"></span> 項</h2>
@@ -129,7 +129,7 @@
         </div>
     </div>
 
-    <!-- 單個修改彈窗 (保持全功能) -->
+    <!-- 單個修改彈窗 (保持不變) -->
     <div id="editModal" class="modal"><div class="modal-content"><h2 id="modalTitle" style="margin-top:0;">編輯資訊</h2><label>剩餘用量</label><input type="text" id="inputUsageVal"><label>存放地點</label><input type="text" id="inputLoc"><label>提取人員</label><select id="selectStaff" style="background:#eff6ff; color:#1d4ed8;"></select><div style="display: flex; gap: 10px;"><button onclick="closeModal('editModal')" class="btn" style="flex:1; background:#f1f5f9;">取消</button><button onclick="confirmSave()" class="btn" style="flex:1; background:#2563eb; color:white;">本地確認</button></div></div></div>
     <div id="telcoModal" class="modal"><div class="modal-content"><h2 style="margin-top:0;">選擇電訊商</h2><div class="telco-grid" id="telcoBtnGroup"></div><button onclick="closeModal('telcoModal')" class="btn" style="width:100%; margin-top:20px; background:#f1f5f9;">關閉</button></div></div>
 
@@ -166,8 +166,8 @@
                 const res = await fetch(GAS_URL + "?t=" + new Date().getTime());
                 const data = await res.json();
                 simRecords = (Array.isArray(data) && data.length > 0) ? data : generateInitial();
-                selectedIndices.clear(); setDirty(false); render();
-            } catch(e) { alert("讀取失敗"); simRecords = generateInitial(); render(); }
+                setDirty(false); selectedIndices.clear(); render();
+            } catch(e) { alert("連線失敗"); simRecords = generateInitial(); render(); }
             toggleLoader(false);
         }
 
@@ -176,7 +176,7 @@
             toggleLoader(true);
             try {
                 await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(simRecords) });
-                setDirty(false); alert("✅ 同步完成！資料存入雲端需時 2-3 秒。");
+                setDirty(false); alert("✅ 資料同步成功！");
             } catch(e) { alert("同步失敗"); }
             toggleLoader(false);
         }
@@ -252,10 +252,10 @@
                     <td><div style="display:flex; align-items:center;"><b>${r.telco}</b><div class="quick-edit-btn" onclick="currentIdx=${i}; document.getElementById('telcoModal').style.display='flex';">✏️</div></div></td>
                     <td><span style="background:#f1f5f9; padding:4px 8px; border-radius:6px; font-weight:800;">${r.remains}</span></td>
                     <td><div style="display:flex; align-items:center;">${r.expiry}<div class="quick-edit-btn" onclick="quickEditExpiry(${i})">✏️</div></div></td>
-                    <td style="color:#64748b;">${r.location}</td>
+                    <td>${r.location}</td>
                     <td style="color:#2563eb; font-weight:900;">${r.staff}</td>
                     <td style="font-size:10px; color:#cbd5e1; text-align:center;">${String(r.date)}</td>
-                    <td style="text-align:center;"><div style="display:flex; gap:5px; justify-content:center;"><button onclick="openEditModal(${i})" class="btn-edit">改</button><button onclick="resetSingle(${i})" class="btn-reset-single">✕</button></div></td>
+                    <td style="text-align:center;"><div style="display:flex; gap:5px; justify-content:center;"><button onclick="openEditModal(${i})" class="btn btn-edit">改</button><button onclick="resetSingle(${i})" class="btn-reset-single">✕</button></div></td>
                 </tr>`;
             }).join('');
 
