@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIM 雲端管理系統 - 最終完美同步版</title>
+    <title>SIM 雲端管理系統 - 香港時間修正版</title>
     <style>
         body { font-family: sans-serif; background-color: #f1f5f9; padding: 20px; color: #334155; margin: 0; }
         .container { max-width: 1200px; margin: 0 auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
@@ -88,8 +88,8 @@
     </div>
 
     <script>
-        // ★ 已經填入你的專屬 GAS URL
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbwxjv4Bj-L2rBuvIwug2ex5Nu2-p8CY3bOP6rOlq_rD6GtAslbxzpxsL0UT-VgBpGWj/exec"; 
+        // ★ 你的專屬 GAS URL
+        const GAS_URL = "https://google.com"; 
 
         const userList = ["Leo", "Mason", "Mayce", "Sherman", "ting ting", "Jenna", "Roy", "Arron", "solar", "Willam", "hanson"];
         const telcoList = ["CSL", "3HK", "SmarTone", "CMHK", "Lucky SIM"];
@@ -117,7 +117,7 @@
                 simRecords = await res.json();
                 if(!simRecords || simRecords.length === 0) simRecords = Array.from({length:30}, (_,i)=>({id:"M"+(i+1).toString().padStart(2,'0'), telco:"---", remains:"---", expiry:"---", location:"---", staff:"---", date:"---"}));
                 render();
-            } catch(e) { alert("連線失敗，請檢查網路。"); }
+            } catch(e) { console.error(e); }
             toggleLoader(false);
         }
 
@@ -172,19 +172,22 @@
                 uploadData();
             }
         }
-        // --- 修正後的香港時間函數 ---
+
+        // --- 強制香港時間修正版 ---
         function updateTime(idx) { 
             const now = new Date();
-            const hkTime = now.toLocaleString('zh-HK', {
+            const hkTimeStr = now.toLocaleString('zh-HK', {
                 timeZone: 'Asia/Hong_Kong',
-                hour12: false,
                 month: '2-digit',
                 day: '2-digit',
                 hour: '2-digit',
-                minute: '2-digit'
+                minute: '2-digit',
+                hour12: false
             });
-            simRecords[idx].date = hkTime; 
+            // 加上單引號防止 Google Sheets 自動轉換格式
+            simRecords[idx].date = "'" + hkTimeStr; 
         }
+
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
         function toggleLoader(s) { document.getElementById('loader').style.display = s ? 'flex' : 'none'; }
         async function resetAll() { if (confirm("⚠️ 注意：這將清除雲端所有資料，確定嗎？")) { simRecords = []; uploadData(); } }
