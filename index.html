@@ -3,256 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIM 管理系統 - 專業增強版</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>SIM 雲端同步系統</title>
+    <script src="https://tailwindcss.com"></script>
     <style>
         @import url('https://googleapis.com');
         body { font-family: 'Noto Sans TC', sans-serif; }
-        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; color: white; font-weight: bold; }
+        body.is-loading .loading-overlay { display: flex; }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen p-4 md:p-8">
+<body class="bg-slate-100 min-h-screen p-4 md:p-8">
 
-    <div class="max-w-7xl mx-auto">
-        <!-- 頂部標題欄 -->
-        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
-            <div>
-                <h1 class="text-3xl font-black text-slate-800 tracking-tighter">SIM <span class="text-blue-600">Inventory</span></h1>
-                <p class="text-slate-400 text-xs mt-1 uppercase tracking-widest font-bold">Management System v8.5</p>
-            </div>
-            <div class="flex gap-3">
-                <button onclick="resetAll()" class="bg-rose-50 text-rose-600 border border-rose-100 px-5 py-2.5 rounded-xl hover:bg-rose-600 hover:text-white transition-all font-bold text-sm shadow-sm">
-                    ⚠️ 全部重置
-                </button>
-                <button onclick="exportCSV()" class="bg-slate-900 text-white px-5 py-2.5 rounded-xl hover:bg-slate-700 transition-all shadow-lg font-bold text-sm flex items-center gap-2">
-                    <span>📥</span> 匯出 Excel
-                </button>
+    <div id="loader" class="loading-overlay flex-col">
+        <div class="animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent mb-2"></div>
+        <p>雲端同步中...</p>
+    </div>
+
+    <div class="max-w-6xl mx-auto bg-white p-6 rounded-2xl shadow-xl">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-black text-slate-800">SIM <span class="text-blue-600">Cloud Sync</span></h1>
+            <div class="flex gap-2">
+                <button onclick="loadData()" class="bg-slate-100 px-4 py-2 rounded-lg font-bold text-sm">🔄 刷新</button>
+                <button onclick="resetAll()" class="bg-rose-50 text-rose-600 px-4 py-2 rounded-lg font-bold text-sm">⚠️ 重置</button>
             </div>
         </div>
 
-        <!-- 主要表格 -->
-        <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-200">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left table-auto border-collapse">
-                    <thead>
-                        <tr class="bg-slate-900 text-slate-400 text-[11px] uppercase tracking-[0.2em] font-black">
-                            <th class="p-5 w-20 text-center">編號</th>
-                            <th class="p-5">電訊商</th>
-                            <th class="p-5">剩餘用量</th>
-                            <th class="p-5">地點</th>
-                            <th class="p-5">用途</th>
-                            <th class="p-5 text-yellow-500">提取人員</th>
-                            <th class="p-5 text-center">最後更新</th>
-                            <th class="p-5 text-center">操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="simTable" class="divide-y divide-slate-100 text-slate-700">
-                        <!-- 由 JavaScript 生成內容 -->
-                    </tbody>
-                </table>
-            </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-slate-900 text-white">
+                        <th class="p-4 text-center">編號</th>
+                        <th class="p-4 text-left">電訊商</th>
+                        <th class="p-4 text-left">用量</th>
+                        <th class="p-4 text-left">地點</th>
+                        <th class="p-4 text-left">領取人</th>
+                        <th class="p-4 text-center">更新日期</th>
+                        <th class="p-4 text-center">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="simTable" class="divide-y divide-slate-100">
+                    <tr><td colspan="7" class="p-10 text-center text-slate-400">正在讀取雲端資料...</td></tr>
+                </tbody>
+            </table>
         </div>
     </div>
 
-    <!-- 修改視窗 (Modal) -->
-    <div id="editModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
-            <div class="bg-slate-900 p-6 text-white">
-                <h3 class="text-xl font-black" id="modalTitle">修改資料</h3>
-                <p class="text-slate-400 text-xs mt-1">請更新以下 SIM 卡資訊</p>
+    <!-- 修改彈窗 -->
+    <div id="editModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+        <div class="bg-white p-6 rounded-2xl w-full max-w-sm shadow-2xl">
+            <h2 id="modalTitle" class="text-xl font-black mb-4">修改</h2>
+            <div class="space-y-4">
+                <select id="selectTelco" class="w-full border p-3 rounded-xl bg-slate-50 font-bold"></select>
+                <input type="text" id="inputUsageVal" placeholder="用量" class="w-full border p-3 rounded-xl">
+                <input type="text" id="inputLoc" placeholder="地點" class="w-full border p-3 rounded-xl">
+                <select id="selectStaff" class="w-full border p-3 rounded-xl bg-blue-50 text-blue-700 font-bold"></select>
             </div>
-            
-            <div class="p-8 space-y-5">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-400 mb-1.5 uppercase tracking-wider">電訊商</label>
-                        <select id="selectTelco" class="w-full border-2 border-slate-100 p-3 rounded-xl outline-none focus:border-blue-500 transition-colors bg-slate-50 font-bold text-slate-700"></select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-400 mb-1.5 uppercase tracking-wider">剩餘用量</label>
-                        <input type="text" id="inputUsageVal" placeholder="例如: 10GB" class="w-full border-2 border-slate-100 p-3 rounded-xl outline-none focus:border-blue-500 transition-colors bg-slate-50 font-bold">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-[10px] font-black text-slate-400 mb-1.5 uppercase tracking-wider">存放地點</label>
-                    <input type="text" id="inputLoc" placeholder="輸入位置" class="w-full border-2 border-slate-100 p-3 rounded-xl outline-none focus:border-blue-500 transition-colors bg-slate-50 font-bold">
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-400 mb-1.5 uppercase tracking-wider">狀態 / 用途</label>
-                        <select id="selectUsage" class="w-full border-2 border-slate-100 p-3 rounded-xl outline-none focus:border-blue-500 transition-colors bg-slate-50 font-bold text-slate-700">
-                            <option value="在庫">在庫</option>
-                            <option value="Operation">Operation</option>
-                            <option value="測試">測試</option>
-                            <option value="其他">其他</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-400 mb-1.5 uppercase tracking-wider text-blue-600">提取人員</label>
-                        <select id="selectStaff" class="w-full border-2 border-slate-100 p-3 rounded-xl outline-none focus:border-blue-500 transition-colors bg-blue-50 font-bold text-blue-700"></select>
-                    </div>
-                </div>
-            </div>
-
-            <div class="p-6 bg-slate-50 flex gap-3">
-                <button onclick="closeModal()" class="flex-1 py-3 font-bold text-slate-400 hover:text-slate-600 transition-colors">取消</button>
-                <button onclick="confirmSave()" class="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all">儲存變更</button>
+            <div class="flex mt-6 gap-3">
+                <button onclick="closeModal()" class="flex-1 py-3 text-slate-400 font-bold">取消</button>
+                <button onclick="confirmSave()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg">確認儲存</button>
             </div>
         </div>
     </div>
 
     <script>
-        /** --- 設定區 --- **/
+        // ★ 在這裡貼上你的 GAS 網址
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbx_nEKm4Bi7bf4xiVtmtNGfTM56Ss-TcjKrDMAyvCun7AG5E-GtgvJCTKZSsFrtCnyi/exec"; 
+
         const userList = ["Leo", "Mason", "Mayce", "Sherman", "ting ting", "Jenna", "Roy", "Arron", "solar", "Willam", "hanson"];
         const telcoList = ["CSL", "3HK", "SmarTone", "CMHK", "Lucky SIM"];
-        const STORAGE_KEY = 'sim_data_v8_5';
-
         let simRecords = [];
         let currentEditIdx = null;
 
-        /** --- 初始化 --- **/
-        window.onload = function() {
-            setupDropdowns();
+        window.onload = () => {
+            userList.forEach(n => document.getElementById('selectStaff').add(new Option(n, n)));
+            telcoList.forEach(t => document.getElementById('selectTelco').add(new Option(t, t)));
             loadData();
-            render();
         };
 
-        function setupDropdowns() {
-            // 人員選單
-            const staffSelect = document.getElementById('selectStaff');
-            staffSelect.innerHTML = '<option value="---">-- 未領取 --</option>';
-            userList.forEach(name => staffSelect.add(new Option(name, name)));
-
-            // 電訊商選單
-            const telcoSelect = document.getElementById('selectTelco');
-            telcoSelect.innerHTML = '<option value="---">-- 未設定 --</option>';
-            telcoList.forEach(t => telcoSelect.add(new Option(t, t)));
+        async function loadData() {
+            document.body.classList.add('is-loading');
+            try {
+                const res = await fetch(GAS_URL);
+                simRecords = await res.json();
+                if(!simRecords || simRecords.length === 0) { simRecords = generateInitial(); }
+                render();
+            } catch(e) { alert("讀取雲端失敗，請檢查網址"); }
+            document.body.classList.remove('is-loading');
         }
 
-        function loadData() {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) {
-                simRecords = JSON.parse(saved);
-            } else {
-                generateDefault();
-            }
+        async function confirmSave() {
+            const r = simRecords[currentEditIdx];
+            r.telco = document.getElementById('selectTelco').value;
+            r.remains = document.getElementById('inputUsageVal').value || "---";
+            r.location = document.getElementById('inputLoc').value || "---";
+            r.staff = document.getElementById('selectStaff').value;
+            r.date = new Date().toLocaleString('zh-HK', {hour12:false, month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'});
+            r.usage = "已提取"; // 預設用途
+
+            closeModal();
+            render();
+            document.body.classList.add('is-loading');
+            try {
+                await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(simRecords) });
+                setTimeout(loadData, 1500); 
+            } catch(e) { alert("儲存失敗"); document.body.classList.remove('is-loading'); }
         }
 
-        function generateDefault() {
-            simRecords = [];
-            for (let i = 1; i <= 30; i++) {
-                simRecords.push({ 
-                    id: "M" + String(i).padStart(2, '0'), 
-                    telco: "---",
-                    remains: "---",
-                    location: "---", 
-                    usage: "在庫", 
-                    staff: "---", 
-                    date: "---" 
-                });
-            }
-            save();
-        }
-
-        /** --- 畫面渲染 --- **/
         function render() {
-            const tbody = document.getElementById('simTable');
-            tbody.innerHTML = simRecords.map((item, index) => `
-                <tr class="hover:bg-slate-50 transition-colors group">
-                    <td class="p-5 text-center font-mono font-black text-slate-300 text-lg border-r border-slate-50 group-hover:text-blue-400 transition-colors">${item.id}</td>
-                    <td class="p-5"><span class="font-black text-slate-700">${item.telco}</span></td>
-                    <td class="p-5"><span class="bg-slate-100 px-2 py-1 rounded text-xs font-mono text-slate-500">${item.remains}</span></td>
-                    <td class="p-5 font-bold text-slate-600">${item.location}</td>
-                    <td class="p-5">
-                        <span class="px-3 py-1 rounded-full text-[10px] font-black tracking-wider ${item.usage === '在庫' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">
-                            ${item.usage}
-                        </span>
-                    </td>
-                    <td class="p-5 font-black text-blue-600 underline decoration-blue-100 decoration-2 underline-offset-4">${item.staff}</td>
-                    <td class="p-5 text-center font-mono text-[10px] text-slate-300">${item.date}</td>
-                    <td class="p-5">
-                        <div class="flex justify-center items-center gap-3">
-                            <button onclick="openModal(${index})" class="bg-slate-800 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-600 hover:shadow-lg transition-all active:scale-90">修改</button>
-                            <button onclick="resetSingle(${index})" class="text-slate-300 hover:text-rose-500 transition-colors" title="重置">
-                                <svg xmlns="http://w3.org" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
-                    </td>
+            document.getElementById('simTable').innerHTML = simRecords.map((r, i) => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-4 text-center font-mono font-bold text-slate-300 border-r">${r.id}</td>
+                    <td class="p-4 font-bold text-slate-700">${r.telco}</td>
+                    <td class="p-4"><span class="bg-slate-100 px-2 py-1 rounded text-xs font-bold text-slate-500">${r.remains}</span></td>
+                    <td class="p-4">${r.location}</td>
+                    <td class="p-4 text-blue-600 font-black">${r.staff}</td>
+                    <td class="p-4 text-center text-[10px] text-slate-300 font-mono">${r.date}</td>
+                    <td class="p-4 text-center"><button onclick="openModal(${i})" class="bg-slate-800 text-white px-3 py-1 rounded-lg text-xs font-bold">修改</button></td>
                 </tr>
             `).join('');
         }
 
-        /** --- 操作功能 --- **/
-        function openModal(idx) {
-            currentEditIdx = idx;
-            const data = simRecords[idx];
-            document.getElementById('modalTitle').innerText = "編輯卡片 " + data.id;
-            document.getElementById('selectTelco').value = data.telco;
-            document.getElementById('inputUsageVal').value = data.remains === "---" ? "" : data.remains;
-            document.getElementById('inputLoc').value = data.location === "---" ? "" : data.location;
-            document.getElementById('selectUsage').value = data.usage;
-            document.getElementById('selectStaff').value = data.staff;
+        function openModal(i) {
+            currentEditIdx = i;
+            const r = simRecords[i];
+            document.getElementById('modalTitle').innerText = "編輯 " + r.id;
+            document.getElementById('selectTelco').value = r.telco;
+            document.getElementById('inputUsageVal').value = r.remains === "---" ? "" : r.remains;
+            document.getElementById('inputLoc').value = r.location === "---" ? "" : r.location;
+            document.getElementById('selectStaff').value = r.staff;
             document.getElementById('editModal').classList.remove('hidden');
         }
 
-        function closeModal() {
-            document.getElementById('editModal').classList.add('hidden');
-        }
-
-        function confirmSave() {
-            const idx = currentEditIdx;
-            const now = new Date();
-            const timeString = `${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
-            
-            simRecords[idx] = {
-                id: simRecords[idx].id,
-                telco: document.getElementById('selectTelco').value,
-                remains: document.getElementById('inputUsageVal').value.trim() || "---",
-                location: document.getElementById('inputLoc').value.trim() || "---",
-                usage: document.getElementById('selectUsage').value,
-                staff: document.getElementById('selectStaff').value,
-                date: timeString
-            };
-            
-            save();
-            render();
-            closeModal();
-        }
-
-        function resetSingle(idx) {
-            if (confirm(`確定要將項目 ${simRecords[idx].id} 恢復為初始狀態嗎？`)) {
-                simRecords[idx] = { id: simRecords[idx].id, telco: "---", remains: "---", location: "---", usage: "在庫", staff: "---", date: "---" };
-                save();
-                render();
-            }
-        }
-
-        function resetAll() {
-            if (confirm("⚠️ 注意：這將永久清除所有資料並回復 30 張空白卡片。確定嗎？")) {
-                generateDefault();
-                render();
-            }
-        }
-
-        function save() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(simRecords));
-        }
-
-        function exportCSV() {
-            let csvContent = "\uFEFF編號,電訊商,剩餘用量,地點,用途,提取人員,最後更新\n";
-            simRecords.forEach(r => {
-                csvContent += `${r.id},${r.telco},${r.remains},${r.location},${r.usage},${r.staff},${r.date}\n`;
-            });
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = `SIM_Inventory_${new Date().toISOString().slice(0,10)}.csv`;
-            link.click();
-        }
+        function closeModal() { document.getElementById('editModal').classList.add('hidden'); }
+        function generateInitial() { return Array.from({length:30}, (_,i)=>({id:"M"+(i+1).toString().padStart(2,'0'), telco:"---", remains:"---", location:"---", usage:"在庫", staff:"---", date:"---"})); }
+        async function resetAll() { if(confirm("確定重置雲端資料？")) { simRecords = generateInitial(); render(); document.body.classList.add('is-loading'); await fetch(GAS_URL, {method:'POST', mode:'no-cors', body:JSON.stringify(simRecords)}); setTimeout(loadData, 1500); } }
     </script>
 </body>
 </html>
