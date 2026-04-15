@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIM 雲端管理系統 - 完美同步版</title>
+    <title>SIM 雲端管理系統 - 最終完美同步版</title>
     <style>
         body { font-family: sans-serif; background-color: #f1f5f9; padding: 20px; color: #334155; margin: 0; }
         .container { max-width: 1200px; margin: 0 auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
@@ -14,7 +14,7 @@
         tr:hover { background-color: #f8fafc; }
         .btn { padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; border: none; transition: 0.2s; }
         .btn-edit { background: #334155; color: white; }
-        .btn-reset-single { background: none; color: #cbd5e1; font-size: 18px; padding: 0 10px; }
+        .btn-reset-single { background: none; color: #cbd5e1; font-size: 18px; padding: 0 10px; border:none; cursor:pointer; }
         .btn-reset-single:hover { color: #ef4444; }
         .btn-refresh { background: #e2e8f0; color: #475569; margin-right: 10px; }
         .btn-reset-all { background: #fee2e2; color: #dc2626; margin-left: 10px; }
@@ -42,8 +42,8 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h1>SIM <span style="color:#3b82f6">Cloud</span></h1>
             <div>
-                <button onclick="loadData()" class="btn btn-refresh">🔄 刷新</button>
-                <button onclick="resetAll()" class="btn btn-reset-all">⚠️ 全部重置</button>
+                <button onclick="loadData()" class="btn btn-refresh">🔄 刷新數據</button>
+                <button onclick="resetAll()" class="btn btn-reset-all">⚠️ 全部清空</button>
             </div>
         </div>
 
@@ -68,8 +68,8 @@
     <div id="editModal" class="modal">
         <div class="modal-content">
             <h2 id="modalTitle" style="margin-top:0;">編輯領取資訊</h2>
-            <div class="form-group"><label>剩餘用量</label><input type="text" id="inputUsageVal"></div>
-            <div class="form-group"><label>存放地點</label><input type="text" id="inputLoc"></div>
+            <div class="form-group"><label>剩餘用量</label><input type="text" id="inputUsageVal" placeholder="例如: 5GB"></div>
+            <div class="form-group"><label>存放地點</label><input type="text" id="inputLoc" placeholder="例如: 抽屜 A1"></div>
             <div class="form-group"><label>提取人員</label><select id="selectStaff" style="background:#eff6ff; color:#1d4ed8;"></select></div>
             <div style="display: flex; gap: 10px; margin-top: 25px;">
                 <button onclick="closeModal('editModal')" class="btn" style="flex:1; background:#f1f5f9; color:#64748b;">取消</button>
@@ -88,7 +88,7 @@
     </div>
 
     <script>
-        // ★ 請在這裡貼上你的 GAS URL
+        // ★ 已經填入你的專屬 GAS URL
         const GAS_URL = "https://script.google.com/macros/s/AKfycbwxjv4Bj-L2rBuvIwug2ex5Nu2-p8CY3bOP6rOlq_rD6GtAslbxzpxsL0UT-VgBpGWj/exec"; 
 
         const userList = ["Leo", "Mason", "Mayce", "Sherman", "ting ting", "Jenna", "Roy", "Arron", "solar", "Willam", "hanson"];
@@ -117,7 +117,7 @@
                 simRecords = await res.json();
                 if(!simRecords || simRecords.length === 0) simRecords = Array.from({length:30}, (_,i)=>({id:"M"+(i+1).toString().padStart(2,'0'), telco:"---", remains:"---", expiry:"---", location:"---", staff:"---", date:"---"}));
                 render();
-            } catch(e) { console.error(e); }
+            } catch(e) { alert("連線失敗，請檢查網路。"); }
             toggleLoader(false);
         }
 
@@ -172,10 +172,22 @@
                 uploadData();
             }
         }
-        function updateTime(idx) { const now = new Date(); simRecords[idx].date = (now.getMonth()+1) + "/" + now.getDate() + " " + now.getHours() + ":" + String(now.getMinutes()).padStart(2, '0'); }
+        // --- 修正後的香港時間函數 ---
+        function updateTime(idx) { 
+            const now = new Date();
+            const hkTime = now.toLocaleString('zh-HK', {
+                timeZone: 'Asia/Hong_Kong',
+                hour12: false,
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            simRecords[idx].date = hkTime; 
+        }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
         function toggleLoader(s) { document.getElementById('loader').style.display = s ? 'flex' : 'none'; }
-        async function resetAll() { if (confirm("⚠️ 清除所有雲端資料？")) { simRecords = []; uploadData(); } }
+        async function resetAll() { if (confirm("⚠️ 注意：這將清除雲端所有資料，確定嗎？")) { simRecords = []; uploadData(); } }
     </script>
 </body>
 </html>
