@@ -3,140 +3,257 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIM 雲端同步系統</title>
-    <script src="https://tailwindcss.com"></script>
+    <title>SIM 管理系統 - 專業優化版</title>
     <style>
-        @import url('https://googleapis.com');
-        body { font-family: 'Noto Sans TC', sans-serif; }
-        .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; color: white; font-weight: bold; }
-        body.is-loading .loading-overlay { display: flex; }
+        body { font-family: sans-serif; background-color: #f1f5f9; padding: 20px; color: #334155; margin: 0; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        h1 { color: #1e293b; border-bottom: 3px solid #3b82f6; padding-bottom: 10px; margin-top: 0; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 10px; }
+        th { background: #1e293b; color: white; padding: 14px; text-align: left; }
+        td { padding: 14px; border-bottom: 1px solid #e2e8f0; }
+        tr:hover { background-color: #f8fafc; }
+        .btn { padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; border: none; transition: 0.2s; }
+        .btn-edit { background: #334155; color: white; }
+        .btn-reset-single { background: none; color: #cbd5e1; font-size: 18px; padding: 0 10px; }
+        .btn-reset-single:hover { color: #ef4444; }
+        .btn-reset-all { background: #fee2e2; color: #dc2626; margin-left: 10px; }
+        .btn-export { background: #0f172a; color: white; margin-left: 10px; }
+        
+        .quick-edit-btn { 
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 24px; height: 24px; margin-left: 8px; background: #f1f5f9; 
+            border-radius: 6px; cursor: pointer; color: #94a3b8; font-size: 10px;
+            vertical-align: middle; border: 1px solid #e2e8f0;
+        }
+        .quick-edit-btn:hover { background: #3b82f6; color: white; border-color: #3b82f6; }
+
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
+        .modal-content { background: white; padding: 30px; border-radius: 20px; width: 90%; max-width: 400px; box-shadow: 0 25px 50px rgba(0,0,0,0.2); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 11px; font-weight: 900; margin-bottom: 5px; color: #94a3b8; text-transform: uppercase; }
+        input, select { width: 100%; padding: 12px; border: 2px solid #f1f5f9; border-radius: 10px; box-sizing: border-box; font-weight: bold; outline: none; }
+        
+        .telco-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .telco-btn { padding: 12px; border: 2px solid #f1f5f9; border-radius: 10px; background: #fff; cursor: pointer; font-weight: bold; text-align: center; }
+        .telco-btn:hover { border-color: #3b82f6; background: #eff6ff; }
+        .telco-btn.other { color: #3b82f6; border-color: #dbeafe; }
+        .telco-btn.clear { grid-column: span 2; color: #dc2626; }
     </style>
 </head>
-<body class="bg-slate-100 min-h-screen p-4 md:p-8">
+<body>
 
-    <div id="loader" class="loading-overlay flex-col">
-        <div class="animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent mb-2"></div>
-        <p>雲端同步中...</p>
-    </div>
-
-    <div class="max-w-6xl mx-auto bg-white p-6 rounded-2xl shadow-xl">
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-black text-slate-800">SIM <span class="text-blue-600">Cloud Sync</span></h1>
-            <div class="flex gap-2">
-                <button onclick="loadData()" class="bg-slate-100 px-4 py-2 rounded-lg font-bold text-sm">🔄 刷新</button>
-                <button onclick="resetAll()" class="bg-rose-50 text-rose-600 px-4 py-2 rounded-lg font-bold text-sm">⚠️ 重置</button>
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h1>SIM <span style="color:#3b82f6">Manager</span></h1>
+            <div>
+                <button onclick="exportCSV()" class="btn btn-export">📥 匯出 Excel</button>
+                <button onclick="resetAll()" class="btn btn-reset-all">⚠️ 全部重置</button>
             </div>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="bg-slate-900 text-white">
-                        <th class="p-4 text-center">編號</th>
-                        <th class="p-4 text-left">電訊商</th>
-                        <th class="p-4 text-left">用量</th>
-                        <th class="p-4 text-left">地點</th>
-                        <th class="p-4 text-left">領取人</th>
-                        <th class="p-4 text-center">更新日期</th>
-                        <th class="p-4 text-center">操作</th>
-                    </tr>
-                </thead>
-                <tbody id="simTable" class="divide-y divide-slate-100">
-                    <tr><td colspan="7" class="p-10 text-center text-slate-400">正在讀取雲端資料...</td></tr>
-                </tbody>
-            </table>
+        <table>
+            <thead>
+                <tr>
+                    <th style="text-align:center; width: 60px;">編號</th>
+                    <th>電訊商</th>
+                    <th>剩餘用量</th>
+                    <th>到期日</th>
+                    <th>地點</th>
+                    <th>提取人員</th>
+                    <th style="text-align:center">最後更新</th>
+                    <th style="text-align:center">操作</th>
+                </tr>
+            </thead>
+            <tbody id="simTable"></tbody>
+        </table>
+    </div>
+
+    <!-- 修改大彈窗 -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitle" style="margin-top:0;">編輯領取資訊</h2>
+            <div class="form-group">
+                <label>剩餘用量</label>
+                <input type="text" id="inputUsageVal" placeholder="例如: 10GB">
+            </div>
+            <div class="form-group">
+                <label>存放地點</label>
+                <input type="text" id="inputLoc" placeholder="輸入位置">
+            </div>
+            <div class="form-group">
+                <label>提取人員</label>
+                <select id="selectStaff" style="background:#eff6ff; color:#1d4ed8;"></select>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 25px;">
+                <button onclick="closeModal('editModal')" class="btn" style="flex:1; background:#f1f5f9; color:#64748b;">取消</button>
+                <button onclick="confirmSave()" class="btn" style="flex:1; background:#2563eb; color:white;">儲存修改</button>
+            </div>
         </div>
     </div>
 
-    <!-- 修改彈窗 -->
-    <div id="editModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-        <div class="bg-white p-6 rounded-2xl w-full max-w-sm shadow-2xl">
-            <h2 id="modalTitle" class="text-xl font-black mb-4">修改</h2>
-            <div class="space-y-4">
-                <select id="selectTelco" class="w-full border p-3 rounded-xl bg-slate-50 font-bold"></select>
-                <input type="text" id="inputUsageVal" placeholder="用量" class="w-full border p-3 rounded-xl">
-                <input type="text" id="inputLoc" placeholder="地點" class="w-full border p-3 rounded-xl">
-                <select id="selectStaff" class="w-full border p-3 rounded-xl bg-blue-50 text-blue-700 font-bold"></select>
-            </div>
-            <div class="flex mt-6 gap-3">
-                <button onclick="closeModal()" class="flex-1 py-3 text-slate-400 font-bold">取消</button>
-                <button onclick="confirmSave()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg">確認儲存</button>
-            </div>
+    <!-- 電訊商選擇彈窗 -->
+    <div id="telcoModal" class="modal">
+        <div class="modal-content">
+            <h2 style="margin-top:0;">選擇電訊商</h2>
+            <div class="telco-grid" id="telcoBtnGroup"></div>
+            <button onclick="closeModal('telcoModal')" class="btn" style="width:100%; margin-top:20px; background:#f1f5f9; color:#64748b;">關閉選單</button>
         </div>
     </div>
 
     <script>
-        // ★ 在這裡貼上你的 GAS 網址
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbx_nEKm4Bi7bf4xiVtmtNGfTM56Ss-TcjKrDMAyvCun7AG5E-GtgvJCTKZSsFrtCnyi/exec"; 
-
+        const STORAGE_KEY = 'sim_manager_v9_optimized';
         const userList = ["Leo", "Mason", "Mayce", "Sherman", "ting ting", "Jenna", "Roy", "Arron", "solar", "Willam", "hanson"];
         const telcoList = ["CSL", "3HK", "SmarTone", "CMHK", "Lucky SIM"];
+        
         let simRecords = [];
-        let currentEditIdx = null;
+        let currentIdx = null;
 
-        window.onload = () => {
-            userList.forEach(n => document.getElementById('selectStaff').add(new Option(n, n)));
-            telcoList.forEach(t => document.getElementById('selectTelco').add(new Option(t, t)));
+        window.onload = function() {
+            const staffSelect = document.getElementById('selectStaff');
+            staffSelect.options.add(new Option("-- 未領取 --", "---"));
+            userList.forEach(n => staffSelect.options.add(new Option(n, n)));
+
+            const btnGroup = document.getElementById('telcoBtnGroup');
+            telcoList.forEach(t => {
+                let btn = document.createElement('div');
+                btn.className = 'telco-btn';
+                btn.innerText = t;
+                btn.onclick = () => selectTelco(t);
+                btnGroup.appendChild(btn);
+            });
+            let otherBtn = document.createElement('div');
+            otherBtn.className = 'telco-btn other';
+            otherBtn.innerText = '➕ 其他 (自行輸入)';
+            otherBtn.onclick = () => {
+                let custom = prompt("請輸入電訊商名稱:");
+                if(custom) selectTelco(custom);
+            };
+            btnGroup.appendChild(otherBtn);
+            let clearBtn = document.createElement('div');
+            clearBtn.className = 'telco-btn clear';
+            clearBtn.innerText = '清除設定';
+            clearBtn.onclick = () => selectTelco('---');
+            btnGroup.appendChild(clearBtn);
+
             loadData();
+            render();
         };
 
-        async function loadData() {
-            document.body.classList.add('is-loading');
-            try {
-                const res = await fetch(GAS_URL);
-                simRecords = await res.json();
-                if(!simRecords || simRecords.length === 0) { simRecords = generateInitial(); }
-                render();
-            } catch(e) { alert("讀取雲端失敗，請檢查網址"); }
-            document.body.classList.remove('is-loading');
-        }
-
-        async function confirmSave() {
-            const r = simRecords[currentEditIdx];
-            r.telco = document.getElementById('selectTelco').value;
-            r.remains = document.getElementById('inputUsageVal').value || "---";
-            r.location = document.getElementById('inputLoc').value || "---";
-            r.staff = document.getElementById('selectStaff').value;
-            r.date = new Date().toLocaleString('zh-HK', {hour12:false, month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'});
-            r.usage = "已提取"; // 預設用途
-
-            closeModal();
-            render();
-            document.body.classList.add('is-loading');
-            try {
-                await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(simRecords) });
-                setTimeout(loadData, 1500); 
-            } catch(e) { alert("儲存失敗"); document.body.classList.remove('is-loading'); }
+        function loadData() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                simRecords = JSON.parse(saved);
+            } else {
+                simRecords = Array.from({length: 30}, (_, i) => ({
+                    id: "M" + String(i + 1).padStart(2, '0'),
+                    telco: "---", remains: "---", expiry: "---", location: "---", staff: "---", date: "---"
+                }));
+                save();
+            }
         }
 
         function render() {
-            document.getElementById('simTable').innerHTML = simRecords.map((r, i) => `
-                <tr class="hover:bg-slate-50">
-                    <td class="p-4 text-center font-mono font-bold text-slate-300 border-r">${r.id}</td>
-                    <td class="p-4 font-bold text-slate-700">${r.telco}</td>
-                    <td class="p-4"><span class="bg-slate-100 px-2 py-1 rounded text-xs font-bold text-slate-500">${r.remains}</span></td>
-                    <td class="p-4">${r.location}</td>
-                    <td class="p-4 text-blue-600 font-black">${r.staff}</td>
-                    <td class="p-4 text-center text-[10px] text-slate-300 font-mono">${r.date}</td>
-                    <td class="p-4 text-center"><button onclick="openModal(${i})" class="bg-slate-800 text-white px-3 py-1 rounded-lg text-xs font-bold">修改</button></td>
+            const tbody = document.getElementById('simTable');
+            tbody.innerHTML = simRecords.map((r, i) => `
+                <tr>
+                    <td style="text-align:center; font-weight:bold; color:#cbd5e1;">${r.id}</td>
+                    <td>
+                        <div style="display:flex; align-items:center;">
+                            <span style="font-weight:bold;">${r.telco}</span>
+                            <div class="quick-edit-btn" onclick="openTelcoModal(${i})">✏️</div>
+                        </div>
+                    </td>
+                    <td><span style="background:#f1f5f9; padding:3px 8px; border-radius:6px; font-size:12px; font-weight:bold;">${r.remains}</span></td>
+                    <td>
+                        <div style="display:flex; align-items:center;">
+                            <span style="color:#e11d48; font-weight:bold;">${r.expiry}</span>
+                            <div class="quick-edit-btn" onclick="quickEditExpiry(${i})">✏️</div>
+                        </div>
+                    </td>
+                    <td style="color:#64748b;">${r.location}</td>
+                    <td style="color:#2563eb; font-weight:bold;">${r.staff}</td>
+                    <td style="text-align:center; color:#cbd5e1; font-size:11px;">${r.date}</td>
+                    <td style="text-align:center;">
+                        <div style="display:flex; align-items:center; justify-content:center;">
+                            <button onclick="openEditModal(${i})" class="btn btn-edit">修改</button>
+                            <button onclick="resetSingle(${i})" class="btn btn-reset-single" title="清除領取資訊">✕</button>
+                        </div>
+                    </td>
                 </tr>
             `).join('');
         }
 
-        function openModal(i) {
-            currentEditIdx = i;
-            const r = simRecords[i];
+        function openTelcoModal(idx) { currentIdx = idx; document.getElementById('telcoModal').style.display = 'flex'; }
+        function selectTelco(val) {
+            simRecords[currentIdx].telco = val;
+            updateTime(currentIdx); save(); render(); closeModal('telcoModal');
+        }
+
+        function quickEditExpiry(idx) {
+            const old = simRecords[idx].expiry === "---" ? "" : simRecords[idx].expiry;
+            const val = prompt(`輸入 ${simRecords[idx].id} 到期日:`, old);
+            if (val !== null) {
+                simRecords[idx].expiry = val.trim() || "---";
+                updateTime(idx); save(); render();
+            }
+        }
+
+        function openEditModal(idx) {
+            currentIdx = idx;
+            const r = simRecords[idx];
             document.getElementById('modalTitle').innerText = "編輯 " + r.id;
-            document.getElementById('selectTelco').value = r.telco;
             document.getElementById('inputUsageVal').value = r.remains === "---" ? "" : r.remains;
             document.getElementById('inputLoc').value = r.location === "---" ? "" : r.location;
             document.getElementById('selectStaff').value = r.staff;
-            document.getElementById('editModal').classList.remove('hidden');
+            document.getElementById('editModal').style.display = 'flex';
         }
 
-        function closeModal() { document.getElementById('editModal').classList.add('hidden'); }
-        function generateInitial() { return Array.from({length:30}, (_,i)=>({id:"M"+(i+1).toString().padStart(2,'0'), telco:"---", remains:"---", location:"---", usage:"在庫", staff:"---", date:"---"})); }
-        async function resetAll() { if(confirm("確定重置雲端資料？")) { simRecords = generateInitial(); render(); document.body.classList.add('is-loading'); await fetch(GAS_URL, {method:'POST', mode:'no-cors', body:JSON.stringify(simRecords)}); setTimeout(loadData, 1500); } }
+        function confirmSave() {
+            const r = simRecords[currentIdx];
+            r.remains = document.getElementById('inputUsageVal').value.trim() || "---";
+            r.location = document.getElementById('inputLoc').value.trim() || "---";
+            r.staff = document.getElementById('selectStaff').value;
+            updateTime(currentIdx); save(); render(); closeModal('editModal');
+        }
+
+        // --- 核心：修正後的單項重置功能 (保留電訊商與到期日) ---
+        function resetSingle(idx) {
+            if (confirm(`確定要清空 ${simRecords[idx].id} 的領取紀錄嗎？\n(將保留電訊商及到期日資訊)`)) {
+                // 僅重置動態資訊，保留靜態資訊
+                simRecords[idx].remains = "---";
+                simRecords[idx].location = "---";
+                simRecords[idx].staff = "---";
+                simRecords[idx].date = "---";
+                
+                save();
+                render();
+            }
+        }
+
+        function updateTime(idx) {
+            const now = new Date();
+            simRecords[idx].date = (now.getMonth()+1) + "/" + now.getDate() + " " + now.getHours() + ":" + String(now.getMinutes()).padStart(2, '0');
+        }
+
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(simRecords)); }
+
+        function resetAll() {
+            if (confirm("⚠️ 注意：這將會清除所有本地紀錄（包含電訊商與到期日）。")) {
+                localStorage.removeItem(STORAGE_KEY);
+                location.reload();
+            }
+        }
+
+        function exportCSV() {
+            let csv = "\uFEFF編號,電訊商,剩餘用量,到期日,地點,領取人,更新時間\n";
+            simRecords.forEach(r => csv += `${r.id},${r.telco},${r.remains},${r.expiry},${r.location},${r.staff},${r.date}\n`);
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `SIM_Inventory.csv`;
+            link.click();
+        }
     </script>
 </body>
 </html>
