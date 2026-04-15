@@ -3,44 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIM 雲端管理系統 - 批量同步版</title>
+    <title>SIM 雲端管理系統 - 批量同步最終版</title>
     <style>
         body { font-family: sans-serif; background-color: #f1f5f9; padding: 20px; color: #334155; margin: 0; }
         .container { max-width: 1200px; margin: 0 auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        
-        /* 頂部標題與按鈕區 */
         .header-box { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
         h1 { color: #1e293b; border-bottom: 3px solid #3b82f6; padding-bottom: 5px; margin: 0; }
         .button-group { display: flex; gap: 10px; align-items: center; }
-
-        /* 按鈕樣式 */
         .btn { padding: 10px 18px; border-radius: 8px; cursor: pointer; font-weight: bold; border: none; transition: 0.3s; font-size: 14px; display: inline-flex; align-items: center; }
         .btn-refresh { background: #e2e8f0; color: #475569; }
-        .btn-refresh:hover { background: #cbd5e1; }
-        
-        /* 核心同步按鈕 - 預設橘色 */
         .btn-sync { background: #f59e0b; color: white; box-shadow: 0 4px 6px rgba(245, 158, 11, 0.2); }
-        .btn-sync:hover { background: #d97706; }
-        
-        /* 修改後會變綠色閃爍 */
         .btn-sync.dirty { background: #10b981 !important; box-shadow: 0 0 15px rgba(16, 185, 129, 0.6); animation: pulse-green 1.5s infinite; }
         @keyframes pulse-green { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
-
         .btn-reset-all { background: #fee2e2; color: #dc2626; }
         .btn-edit { background: #334155; color: white; padding: 6px 12px; font-size: 12px; }
         .btn-reset-single { background: none; color: #cbd5e1; font-size: 18px; padding: 0 10px; border:none; cursor:pointer; }
-        
-        /* 表格樣式 */
         table { width: 100%; border-collapse: collapse; font-size: 14px; }
         th { background: #1e293b; color: white; padding: 14px; text-align: left; }
         td { padding: 14px; border-bottom: 1px solid #e2e8f0; }
         tr:hover { background-color: #f8fafc; }
-        
-        /* 快捷鍵樣式 */
         .quick-edit-btn { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin-left: 8px; background: #f1f5f9; border-radius: 6px; cursor: pointer; color: #94a3b8; font-size: 10px; vertical-align: middle; border: 1px solid #e2e8f0; }
         .quick-edit-btn:hover { background: #3b82f6; color: white; }
-
-        /* 遮罩與彈窗 */
         #loader { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); color: white; z-index: 2000; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; }
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
         .modal-content { background: white; padding: 30px; border-radius: 20px; width: 90%; max-width: 400px; box-shadow: 0 25px 50px rgba(0,0,0,0.2); }
@@ -60,10 +43,9 @@
         <div class="header-box">
             <h1>SIM <span style="color:#3b82f6">Cloud</span></h1>
             <div class="button-group">
-                <!-- 這三個制是你的主要操作按鈕 -->
                 <button onclick="loadData()" class="btn btn-refresh">🔄 刷新數據</button>
                 <button onclick="uploadData()" id="syncBtn" class="btn btn-sync">💾 儲存並同步</button>
-                <button onclick="resetAll()" class="btn btn-reset-all">⚠️ 重置</button>
+                <button onclick="resetAll()" class="btn btn-reset-all">⚠️ 全部重置</button>
             </div>
         </div>
 
@@ -84,7 +66,7 @@
         </table>
     </div>
 
-    <!-- 大彈窗 -->
+    <!-- 領取彈窗 -->
     <div id="editModal" class="modal">
         <div class="modal-content">
             <h2 id="modalTitle" style="margin-top:0;">編輯領取資訊</h2>
@@ -98,7 +80,7 @@
         </div>
     </div>
 
-    <!-- 電訊商選單 -->
+    <!-- 電訊商彈窗 -->
     <div id="telcoModal" class="modal">
         <div class="modal-content">
             <h2 style="margin-top:0;">選擇電訊商</h2>
@@ -108,7 +90,8 @@
     </div>
 
     <script>
-        const GAS_URL = "https://google.com"; 
+        // ★ 請在此填入你「最新部署」後的網址
+        const GAS_URL = "在此貼上新的GAS網址"; 
 
         const userList = ["Leo", "Mason", "Mayce", "Sherman", "ting ting", "Jenna", "Roy", "Arron", "solar", "Willam", "hanson"];
         const telcoList = ["CSL", "3HK", "SmarTone", "CMHK", "Lucky SIM"];
@@ -132,15 +115,15 @@
         };
 
         async function loadData() {
-            if(isDirty && !confirm("尚有修改未儲存，刷新會遺失修改，確定？")) return;
+            if(isDirty && !confirm("尚有修改未儲存，確定刷新？")) return;
             toggleLoader(true);
             try {
                 const res = await fetch(GAS_URL);
-                simRecords = await res.json();
-                if(!simRecords || simRecords.length === 0) simRecords = Array.from({length:30}, (_,i)=>({id:"M"+(i+1).toString().padStart(2,'0'), telco:"---", remains:"---", expiry:"---", location:"---", staff:"---", date:"---"}));
+                const data = await res.json();
+                simRecords = data.length > 0 ? data : Array.from({length:30}, (_,i)=>({id:"M"+(i+1).toString().padStart(2,'0'), telco:"---", remains:"---", expiry:"---", location:"---", staff:"---", date:"---"}));
                 setDirty(false);
                 render();
-            } catch(e) { alert("連線失敗"); }
+            } catch(e) { alert("連線失敗，請檢查 GAS 權限設定為「所有人」！"); }
             toggleLoader(false);
         }
 
@@ -149,11 +132,7 @@
             toggleLoader(true);
             try {
                 await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(simRecords) });
-                setTimeout(() => {
-                    setDirty(false);
-                    loadData();
-                    alert("同步完成！");
-                }, 1000);
+                setTimeout(() => { setDirty(false); loadData(); alert("同步完成！"); }, 1000);
             } catch(e) { alert("同步失敗"); toggleLoader(false); }
         }
 
@@ -213,7 +192,7 @@
         }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
         function toggleLoader(s) { document.getElementById('loader').style.display = s ? 'flex' : 'none'; }
-        async function resetAll() { if (confirm("⚠️ 確定清空？")) { simRecords = []; setDirty(true); uploadData(); } }
+        async function resetAll() { if (confirm("⚠️ 注意：這將清除雲端所有資料！")) { simRecords = []; setDirty(true); uploadData(); } }
     </script>
 </body>
 </html>
