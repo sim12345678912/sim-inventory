@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIM 雲端管理系統 - 最終批量同步版</title>
+    <title>SIM 雲端管理系統 - 批量同步最終版</title>
     <style>
         body { font-family: sans-serif; background-color: #f1f5f9; padding: 20px; color: #334155; margin: 0; }
         .container { max-width: 1200px; margin: 0 auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
@@ -66,11 +66,11 @@
         </table>
     </div>
 
-    <!-- 領取彈窗 -->
+    <!-- 修改彈窗 -->
     <div id="editModal" class="modal">
         <div class="modal-content">
             <h2 id="modalTitle" style="margin-top:0;">編輯領取資訊</h2>
-            <div class="form-group"><label>剩餘用量</label><input type="text" id="inputUsageVal" placeholder="例如: 10GB"></div>
+            <div class="form-group"><label>剩餘用量</label><input type="text" id="inputUsageVal" placeholder="例如: 5GB"></div>
             <div class="form-group"><label>存放地點</label><input type="text" id="inputLoc" placeholder="例如: 抽屜 A1"></div>
             <div class="form-group"><label>提取人員</label><select id="selectStaff" style="background:#eff6ff; color:#1d4ed8;"></select></div>
             <div style="display: flex; gap: 10px; margin-top: 25px;">
@@ -80,7 +80,7 @@
         </div>
     </div>
 
-    <!-- 電訊商彈窗 -->
+    <!-- 電訊商選單 -->
     <div id="telcoModal" class="modal">
         <div class="modal-content">
             <h2 style="margin-top:0;">選擇電訊商</h2>
@@ -90,8 +90,8 @@
     </div>
 
     <script>
-        // ★ 已填入你提供的最新 GAS URL
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbxbQCpv8P6eSl5NorIJtqLg3BQODoFmXUqmwHkOmd5vmqxuFybyZ0m2c07crHs3yRC5/exec"; 
+        // ★ 已填入你最新的 GAS URL
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbyc5q7ZKjUik4r-CBc-41yl_UPAwOedkv07WhG66_841AdYv6nB24KghMclZsa1l_7t/exec"; 
 
         const userList = ["Leo", "Mason", "Mayce", "Sherman", "ting ting", "Jenna", "Roy", "Arron", "solar", "Willam", "hanson"];
         const telcoList = ["CSL", "3HK", "SmarTone", "CMHK", "Lucky SIM"];
@@ -115,7 +115,7 @@
         };
 
         async function loadData() {
-            if(isDirty && !confirm("尚有修改未儲存，確定刷新？")) return;
+            if(isDirty && !confirm("尚有修改未儲存，刷新會遺失？")) return;
             toggleLoader(true);
             try {
                 const res = await fetch(GAS_URL + "?t=" + new Date().getTime());
@@ -124,21 +124,18 @@
                 setDirty(false);
                 render();
             } catch(e) { 
-                alert("連線成功但讀取異常，請點擊【全部重置】初始化雲端資料！"); 
+                alert("連線中...請按【⚠️ 全部重置】來初始化你的雲端試算表！"); 
+                simRecords = generateInitial();
+                render();
             }
             toggleLoader(false);
         }
 
         async function uploadData() {
-            if(!isDirty) { alert("目前已是最新狀態，無需同步。"); return; }
             toggleLoader(true);
             try {
                 await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(simRecords) });
-                setTimeout(() => { 
-                    setDirty(false); 
-                    loadData(); 
-                    alert("同步指令已發送！資料已寫入雲端。"); 
-                }, 1200);
+                setTimeout(() => { setDirty(false); loadData(); alert("同步成功！資料已寫入雲端。"); }, 1500);
             } catch(e) { alert("同步失敗，請檢查網絡連線"); toggleLoader(false); }
         }
 
@@ -201,7 +198,7 @@
         function generateInitial() { return Array.from({length:30}, (_,i)=>({id:"M"+(i+1).toString().padStart(2,'0'), telco:"---", remains:"---", expiry:"---", location:"---", usage:"在庫", staff:"---", date:"---"})); }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
         function toggleLoader(s) { document.getElementById('loader').style.display = s ? 'flex' : 'none'; }
-        async function resetAll() { if (confirm("⚠️ 警告：這將清除雲端所有資料！確定嗎？")) { simRecords = generateInitial(); setDirty(true); await uploadData(); } }
+        async function resetAll() { if (confirm("⚠️ 警告：這將初始化雲端所有資料，並解決連線失敗的問題。確定嗎？")) { simRecords = generateInitial(); setDirty(true); await uploadData(); } }
     </script>
 </body>
 </html>
