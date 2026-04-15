@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIM 雲端管理系統 - 30行精簡版</title>
+    <title>SIM 雲端管理系統 - 批量全功能版</title>
     <style>
         body { font-family: system-ui, -apple-system, sans-serif; background-color: #f1f5f9; padding: 20px; color: #334155; margin: 0; }
         .container { max-width: 1350px; margin: 0 auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
@@ -17,7 +17,6 @@
         
         .tool-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; background: #f8fafc; padding: 12px 15px; border-radius: 15px; flex-wrap: wrap; }
         .search-box { flex: 1; min-width: 250px; padding: 10px 15px; border: 2px solid #e2e8f0; border-radius: 10px; outline: none; transition: 0.3s; }
-        .search-box:focus { border-color: #3b82f6; background: white; }
 
         .btn { padding: 10px 18px; border-radius: 10px; cursor: pointer; font-weight: bold; border: none; transition: 0.3s; font-size: 13px; display: inline-flex; align-items: center; gap: 5px; }
         .btn-refresh { background: #fff; border: 1px solid #e2e8f0; color: #475569; }
@@ -44,8 +43,8 @@
         
         #loader { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.8); backdrop-filter: blur(5px); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; }
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 9000; }
-        .modal-content { background: white; padding: 30px; border-radius: 20px; width: 90%; max-width: 450px; box-shadow: 0 25px 50px rgba(0,0,0,0.2); }
-        input, select { width: 100%; padding: 10px; border: 2px solid #f1f5f9; border-radius: 10px; margin-bottom: 15px; box-sizing: border-box; font-weight: bold; outline: none; }
+        .modal-content { background: white; padding: 30px; border-radius: 20px; width: 90%; max-width: 450px; }
+        input, select { width: 100%; padding: 10px; border: 2px solid #f1f5f9; border-radius: 10px; margin-bottom: 15px; box-sizing: border-box; outline: none; font-weight: bold; }
         .telco-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .telco-btn { padding: 12px; border: 2px solid #f1f5f9; border-radius: 10px; background: #fff; cursor: pointer; font-weight: bold; text-align: center; }
     </style>
@@ -96,28 +95,33 @@
         </table>
     </div>
 
-    <!-- 批量修改視窗：只留 3 項 -->
+    <!-- 批量修改視窗 -->
     <div id="batchEditModal" class="modal">
         <div class="modal-content">
             <h2 style="margin-top:0;">批量修改 <span id="batchCountText" style="color:#3b82f6"></span> 項</h2>
-            <p style="font-size:11px; color:#94a3b8; margin-bottom:15px;">* 留空表示該欄位不變更</p>
-            <label>剩餘用量</label><input type="text" id="batchRemains" placeholder="例如: 10GB">
-            <label>存放地點</label><input type="text" id="batchLoc" placeholder="例如: 櫃桶 B2">
+            <label>剩餘用量</label><input type="text" id="batchRemains" placeholder="留空則不變">
+            <label>存放地點</label><input type="text" id="batchLoc" placeholder="留空則不變">
             <label>提取人員</label><select id="batchStaff"></select>
             <div style="display: flex; gap: 10px;"><button onclick="closeModal('batchEditModal')" class="btn">取消</button><button onclick="confirmBatchSave()" class="btn" style="background:#3b82f6; color:white;">確認更新</button></div>
         </div>
     </div>
 
-    <!-- 單個編輯視窗 -->
+    <!-- 單個修改視窗 -->
     <div id="editModal" class="modal"><div class="modal-content"><h2 id="modalTitle" style="margin-top:0;">編輯資訊</h2><label>剩餘用量</label><input type="text" id="inputUsageVal"><label>存放地點</label><input type="text" id="inputLoc"><label>提取人員</label><select id="selectStaff" style="background:#eff6ff; color:#1d4ed8;"></select><div style="display: flex; gap: 10px;"><button onclick="closeModal('editModal')" class="btn">取消</button><button onclick="confirmSave()" class="btn" style="background:#2563eb; color:white;">確認</button></div></div></div>
-    <div id="telcoModal" class="modal"><div class="modal-content"><h2 style="margin-top:0;">選擇電訊商</h2><div class="telco-grid" id="telcoBtnGroup"></div><button onclick="closeModal('telcoModal')" class="btn" style="width:100%; margin-top:20px; background:#f1f5f9;">關閉</button></div></div>
+    
+    <!-- 電訊商快捷選擇 -->
+    <div id="telcoModal" class="modal">
+        <div class="modal-content">
+            <h2 style="margin-top:0;">選擇電訊商</h2>
+            <div class="telco-grid" id="telcoBtnGroup"></div>
+            <button onclick="closeModal('telcoModal')" class="btn" style="width:100%; margin-top:20px; background:#f1f5f9;">關閉</button>
+        </div>
+    </div>
 
     <script>
         const GAS_URL = "https://google.com"; 
         const userList = ["Leo", "Mason", "Mayce", "Sherman", "ting ting", "Jenna", "Roy", "Arron", "solar", "Willam", "hanson"];
         const telcoList = ["CSL", "3HK", "SmarTone", "CMHK", "Lucky SIM", "MORE", "鴨聊佳"];
-        
-        // ★ 設定為 30 個
         const totalSIMs = 30; 
 
         let simRecords = []; let selectedIndices = new Set(); let currentIdx = null; let isDirty = false;
@@ -126,12 +130,23 @@
             const s1 = document.getElementById('selectStaff'); const s2 = document.getElementById('batchStaff');
             const opts = [new Option("-- 未領取 --", "---"), ...userList.map(n => new Option(n, n))];
             opts.forEach(o => s1.add(o.cloneNode(true))); s2.add(new Option("-- 不變更 --", "")); opts.forEach(o => s2.add(o.cloneNode(true)));
+            
+            // 初始化電訊商選單
             const btnGroup = document.getElementById('telcoBtnGroup');
             telcoList.forEach(t => {
                 let btn = document.createElement('div'); btn.className = 'telco-btn'; btn.innerText = t;
                 btn.onclick = () => { simRecords[currentIdx].telco = t; updateTime(currentIdx); setDirty(true); render(); closeModal('telcoModal'); };
                 btnGroup.appendChild(btn);
             });
+            // 加入「其他」按鈕
+            let otherBtn = document.createElement('div'); otherBtn.className = 'telco-btn'; otherBtn.innerText = '➕ 其他';
+            otherBtn.style.color = '#3b82f6';
+            otherBtn.onclick = () => { 
+                let c = prompt("手動輸入電訊商名稱:"); 
+                if(c) { simRecords[currentIdx].telco = c; updateTime(currentIdx); setDirty(true); render(); closeModal('telcoModal'); } 
+            };
+            btnGroup.appendChild(otherBtn);
+            
             loadData();
         };
 
@@ -141,7 +156,6 @@
                 const res = await fetch(GAS_URL + "?t=" + new Date().getTime());
                 const data = await res.json();
                 if (Array.isArray(data) && data.length > 0) {
-                    // 如果雲端資料超過 30，只取前 30
                     simRecords = data.slice(0, totalSIMs);
                     if (simRecords.length < totalSIMs) {
                         for (let i = simRecords.length; i < totalSIMs; i++) {
@@ -156,20 +170,18 @@
 
         async function uploadData() {
             toggleLoader(true);
-            try { await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(simRecords) }); setDirty(false); alert("✅ 資料同步成功！"); } catch(e) { alert("同步失敗"); }
+            try { await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(simRecords) }); setDirty(false); alert("✅ 同步完成！"); } catch(e) { alert("同步失敗"); }
             toggleLoader(false);
         }
 
         function exportToExcel() {
-            let csvContent = "\uFEFF編號,狀態,電訊商,剩餘用量,到期日,存放地點,提取人員,最後更新\n";
+            let csvContent = "\uFEFF編號,狀態,電訊商,用量,到期日,地點,提取人員,最後更新\n";
             simRecords.forEach(r => {
                 const status = r.staff === "---" ? "在庫" : "已領用";
-                const row = [r.id, status, r.telco, r.remains, r.expiry, r.location, r.staff, r.date];
-                csvContent += row.join(",") + "\n";
+                csvContent += `${r.id},${status},${r.telco},${r.remains},${r.expiry},${r.location},${r.staff},${r.date}\n`;
             });
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
+            link.href = URL.createObjectURL(new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }));
             link.download = `SIM_Cloud_Backup_${new Date().toLocaleDateString()}.csv`;
             link.click();
         }
@@ -193,7 +205,7 @@
                     <td>${r.location}</td>
                     <td style="color:#2563eb; font-weight:900;">${r.staff}</td>
                     <td style="font-size:10px; color:#cbd5e1; text-align:center;">${String(r.date)}</td>
-                    <td style="text-align:center;"><button onclick="openEditModal(${i})" style="padding:5px 10px; border-radius:6px; border:none; background:#334155; color:white; cursor:pointer;">改</button></td>
+                    <td style="text-align:center;"><div style="display:flex; gap:5px; justify-content:center;"><button onclick="openEditModal(${i})" class="btn-edit" style="padding:5px 10px; border-radius:6px; border:none; background:#334155; color:white; cursor:pointer;">改</button><button onclick="resetSingle(${i})" style="color:#cbd5e1; background:none; border:none; cursor:pointer; font-size:16px;">✕</button></div></td>
                 </tr>`;
             }).join('');
             document.getElementById('batchTools').style.display = selectedIndices.size > 0 ? 'flex' : 'none';
@@ -207,14 +219,15 @@
         function openBatchEdit() { document.getElementById('batchCountText').innerText = selectedIndices.size; document.getElementById('batchEditModal').style.display = 'flex'; }
         function confirmBatchSave() {
             const r = document.getElementById('batchRemains').value.trim(); const l = document.getElementById('batchLoc').value.trim(); const s = document.getElementById('batchStaff').value;
-            selectedIndices.forEach(idx => { if (r) simRecords[idx].remains = r; if (l) simRecords[idx].location = l; if (s !== "") { simRecords[idx].staff = s; simRecords[idx].usage = (s === "---") ? "在庫" : "已領用"; } updateTime(idx); });
+            selectedIndices.forEach(idx => { if (r) simRecords[idx].remains = r; if (l) simRecords[idx].location = l; if (s !== "") { simRecords[idx].staff = s; simRecords[idx].usage = (s === "---" ? "在庫" : "已領用"); } updateTime(idx); });
             setDirty(true); closeModal('batchEditModal'); render();
         }
-        function batchReset() { if (confirm(`重設選中的 ${selectedIndices.size} 項紀錄？`)) { selectedIndices.forEach(idx => { simRecords[idx].remains = "---"; simRecords[idx].location = "---"; simRecords[idx].staff = "---"; simRecords[idx].date = "---"; simRecords[idx].usage = "在庫"; }); selectedIndices.clear(); setDirty(true); render(); } }
-        function resetAllRecords() { if (confirm("⚠️ 注意：這會清除所有卡片的領取紀錄（保留電訊商與到期日）。確定嗎？")) { simRecords = generateInitial(); setDirty(true); render(); } }
+        function batchReset() { if (confirm(`清除所選 ${selectedIndices.size} 項紀錄？`)) { selectedIndices.forEach(idx => { simRecords[idx].remains = "---"; simRecords[idx].location = "---"; simRecords[idx].staff = "---"; simRecords[idx].date = "---"; simRecords[idx].usage = "在庫"; }); selectedIndices.clear(); setDirty(true); render(); } }
+        function resetAllRecords() { if (confirm("⚠️ 重設所有紀錄？")) { simRecords = generateInitial(); setDirty(true); render(); } }
         function quickEditExpiry(idx) { const val = prompt(`修改到期日:`, simRecords[idx].expiry === "---" ? "" : simRecords[idx].expiry); if (val !== null) { simRecords[idx].expiry = val.trim() || "---"; updateTime(idx); setDirty(true); render(); } }
         function openEditModal(idx) { currentIdx = idx; const r = simRecords[idx]; document.getElementById('modalTitle').innerText = "編輯 " + r.id; document.getElementById('inputUsageVal').value = r.remains === "---" ? "" : r.remains; document.getElementById('inputLoc').value = r.location === "---" ? "" : r.location; document.getElementById('selectStaff').value = r.staff; document.getElementById('editModal').style.display = 'flex'; }
         function confirmSave() { const r = simRecords[currentIdx]; r.remains = document.getElementById('inputUsageVal').value.trim() || "---"; r.location = document.getElementById('inputLoc').value.trim() || "---"; r.staff = document.getElementById('selectStaff').value; r.usage = (r.staff === "---") ? "在庫" : "已領用"; updateTime(currentIdx); setDirty(true); render(); closeModal('editModal'); }
+        function resetSingle(idx) { if (confirm(`清除領取紀錄？`)) { simRecords[idx].remains = "---"; simRecords[idx].location = "---"; simRecords[idx].staff = "---"; simRecords[idx].date = "---"; simRecords[idx].usage = "在庫"; setDirty(true); render(); } }
         function updateTime(idx) { const now = new Date(); simRecords[idx].date = now.toLocaleString('zh-HK', { timeZone: 'Asia/Hong_Kong', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }); }
         function generateInitial() { return Array.from({length:totalSIMs}, (_,i)=>({id:"M"+(i+1).toString().padStart(2,'0'), telco:"---", remains:"---", expiry:"---", location:"---", usage:"在庫", staff:"---", date:"---"})); }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
