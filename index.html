@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIM 雲端管理系統 - 批量同步最終版</title>
+    <title>SIM 雲端管理系統 - 最終批量同步版</title>
     <style>
         body { font-family: sans-serif; background-color: #f1f5f9; padding: 20px; color: #334155; margin: 0; }
         .container { max-width: 1200px; margin: 0 auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
@@ -62,18 +62,16 @@
                     <th style="text-align:center">操作</th>
                 </tr>
             </thead>
-            <tbody id="simTable">
-                <tr><td colspan="8" style="text-align:center; padding:50px; color:#94a3b8;">正在初始化...如果畫面長時間沒反應，請點擊上方【⚠️ 全部重置】</td></tr>
-            </tbody>
+            <tbody id="simTable"></tbody>
         </table>
     </div>
 
-    <!-- 大彈窗 -->
+    <!-- 領取彈窗 -->
     <div id="editModal" class="modal">
         <div class="modal-content">
             <h2 id="modalTitle" style="margin-top:0;">編輯領取資訊</h2>
-            <div class="form-group"><label>剩餘用量</label><input type="text" id="inputUsageVal"></div>
-            <div class="form-group"><label>存放地點</label><input type="text" id="inputLoc"></div>
+            <div class="form-group"><label>剩餘用量</label><input type="text" id="inputUsageVal" placeholder="例如: 10GB"></div>
+            <div class="form-group"><label>存放地點</label><input type="text" id="inputLoc" placeholder="例如: 抽屜 A1"></div>
             <div class="form-group"><label>提取人員</label><select id="selectStaff" style="background:#eff6ff; color:#1d4ed8;"></select></div>
             <div style="display: flex; gap: 10px; margin-top: 25px;">
                 <button onclick="closeModal('editModal')" class="btn" style="flex:1; background:#f1f5f9; color:#64748b;">取消</button>
@@ -92,8 +90,8 @@
     </div>
 
     <script>
-        // ★ 使用你最新的 GAS URL
-        const GAS_URL = "https://google.com"; 
+        // ★ 已填入你提供的最新 GAS URL
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbxbQCpv8P6eSl5NorIJtqLg3BQODoFmXUqmwHkOmd5vmqxuFybyZ0m2c07crHs3yRC5/exec"; 
 
         const userList = ["Leo", "Mason", "Mayce", "Sherman", "ting ting", "Jenna", "Roy", "Arron", "solar", "Willam", "hanson"];
         const telcoList = ["CSL", "3HK", "SmarTone", "CMHK", "Lucky SIM"];
@@ -117,30 +115,31 @@
         };
 
         async function loadData() {
-            if(isDirty && !confirm("尚有修改未儲存，刷新會遺失？")) return;
+            if(isDirty && !confirm("尚有修改未儲存，確定刷新？")) return;
             toggleLoader(true);
             try {
-                // 加上時間戳防止瀏覽器快取
                 const res = await fetch(GAS_URL + "?t=" + new Date().getTime());
                 const data = await res.json();
                 simRecords = (Array.isArray(data) && data.length > 0) ? data : generateInitial();
                 setDirty(false);
                 render();
             } catch(e) { 
-                console.error(e);
-                // 如果是新表格完全沒數據，先生成初始數據
-                simRecords = generateInitial();
-                render();
+                alert("連線成功但讀取異常，請點擊【全部重置】初始化雲端資料！"); 
             }
             toggleLoader(false);
         }
 
         async function uploadData() {
+            if(!isDirty) { alert("目前已是最新狀態，無需同步。"); return; }
             toggleLoader(true);
             try {
                 await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(simRecords) });
-                setTimeout(() => { setDirty(false); loadData(); alert("同步完成！"); }, 1500);
-            } catch(e) { alert("同步失敗"); toggleLoader(false); }
+                setTimeout(() => { 
+                    setDirty(false); 
+                    loadData(); 
+                    alert("同步指令已發送！資料已寫入雲端。"); 
+                }, 1200);
+            } catch(e) { alert("同步失敗，請檢查網絡連線"); toggleLoader(false); }
         }
 
         function setDirty(dirty) {
@@ -185,11 +184,13 @@
             r.remains = document.getElementById('inputUsageVal').value.trim() || "---";
             r.location = document.getElementById('inputLoc').value.trim() || "---";
             r.staff = document.getElementById('selectStaff').value;
+            r.usage = "已領用";
             updateTime(currentIdx); setDirty(true); render(); closeModal('editModal');
         }
         function resetSingle(idx) {
-            if (confirm(`清除領取紀錄？`)) {
+            if (confirm(`清除領取紀錄？(保留電訊商及到期日)`)) {
                 simRecords[idx].remains = "---"; simRecords[idx].location = "---"; simRecords[idx].staff = "---"; simRecords[idx].date = "---";
+                simRecords[idx].usage = "在庫";
                 setDirty(true); render();
             }
         }
@@ -197,18 +198,10 @@
             const now = new Date();
             simRecords[idx].date = now.toLocaleString('zh-HK', { timeZone: 'Asia/Hong_Kong', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
         }
-        function generateInitial() { return Array.from({length:30}, (_,i)=>({id:"M"+(i+1).toString().padStart(2,'0'), telco:"---", remains:"---", expiry:"---", location:"---", staff:"---", date:"---"})); }
+        function generateInitial() { return Array.from({length:30}, (_,i)=>({id:"M"+(i+1).toString().padStart(2,'0'), telco:"---", remains:"---", expiry:"---", location:"---", usage:"在庫", staff:"---", date:"---"})); }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
         function toggleLoader(s) { document.getElementById('loader').style.display = s ? 'flex' : 'none'; }
-        
-        // 修改後的重置邏輯：強制推送到雲端
-        async function resetAll() { 
-            if (confirm("⚠️ 此動作將初始化所有卡片。如果這是你第一次使用，請務必點擊確定！")) { 
-                simRecords = generateInitial(); 
-                setDirty(true); 
-                await uploadData(); 
-            } 
-        }
+        async function resetAll() { if (confirm("⚠️ 警告：這將清除雲端所有資料！確定嗎？")) { simRecords = generateInitial(); setDirty(true); await uploadData(); } }
     </script>
 </body>
 </html>
