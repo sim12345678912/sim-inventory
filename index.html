@@ -173,7 +173,7 @@
            
            const logEntry = { time: timeStr, action: fullMsg };
            historyLogs.unshift(logEntry);
-           if (historyLogs.length > 200) historyLogs.pop();
+           if (historyLogs.length > 1000) historyLogs.pop();
            localStorage.setItem('sim_history_logs', JSON.stringify(historyLogs));
        }
 
