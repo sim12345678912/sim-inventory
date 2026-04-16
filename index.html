@@ -3,12 +3,11 @@
 <head>
    <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>SIM 卡雲端管理系統 V23.6</title>
+   <title>SIM 管理系統 V3.7-BATCH-READY</title>
    <style>
        body { font-family: system-ui, -apple-system, sans-serif; background-color: #f1f5f9; padding: 20px; color: #334155; margin: 0; }
        .container { max-width: 1350px; margin: 0 auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
        
-       /* Dashboard 樣式 - 加大數字 */
        .dashboard { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
        .stat-card { background: #f8fafc; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; flex: 1; min-width: 120px; text-align: center; }
        .stat-card .label { font-size: 40px; color: #64748b; font-weight: bold; }
@@ -28,13 +27,11 @@
        
        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
        
-       /* 表格樣式 - 加大字體 */
        table { width: 100%; border-collapse: collapse; font-size: 16px; table-layout: fixed; }
        th { background: #1e293b; color: #94a3b8; padding: 15px 10px; text-align: left; font-weight: bold; font-size: 25px; }
        td { padding: 12px 10px; border-bottom: 1px solid #f1f9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 18px; }
        tr.selected { background-color: #eff6ff !important; }
        
-       /* 狀態標籤 */
        .badge { padding: 4px 8px; border-radius: 6px; font-size: 15px; font-weight: 900; }
        .badge-stock { background: #dcfce7; color: #166534; }
        .badge-used { background: #dbeafe; color: #1e40af; }
@@ -88,12 +85,13 @@
        </table>
    </div>
 
+   <div id="batchClaimModal" class="modal"><div class="modal-content"><h2>批量修改</h2><p>已選中 <span id="batchCountText"></span> 張卡片</p><label>人員 / 狀態</label><select id="batchStaff"></select><label>地點</label><input type="text" id="batchLoc" placeholder="不變更請留空"><label>可用量 (GB)</label><input type="text" id="batchRemains" placeholder="不變更請留空"><div style="display:flex;gap:10px;"><button onclick="closeModal('batchClaimModal')" class="btn">取消</button><button onclick="confirmBatchClaim()" class="btn" style="background:#2563eb;color:white;">確認變更</button></div></div></div>
+
    <div id="editModal" class="modal"><div class="modal-content"><h2 id="modalTitle">編輯</h2><label>可用量 (GB)</label><input type="text" id="inputUsageVal"><label>地點</label><input type="text" id="inputLoc"><label>人員 / 狀態選擇</label><select id="selectStaff"></select><div style="display:flex;gap:10px;"><button onclick="closeModal('editModal')" class="btn">取消</button><button onclick="confirmSave()" class="btn" style="background:#2563eb;color:white;">儲存</button></div></div></div>
    
    <div id="telcoModal" class="modal"><div class="modal-content"><h2>選擇電訊商</h2><div id="telcoBtnGroup" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"></div><button onclick="closeModal('telcoModal')" class="btn" style="width:100%;margin-top:20px;">關閉</button></div></div>
 
    <script>
-       // 【重要】填入你的 GAS /exec 網址
        const GAS_URL = "https://script.google.com/macros/s/AKfycbwuYo_elq0rFkADkewIwuAS3aJpRGq3DgfMCL-fw-2YP7fdnMneTCNO2GDmgI3OwG3W/exec"; 
 
        const userList = ["Leo", "Mason", "Mayce", "Sherman", "ting ting", "Jenna", "Roy", "Arron", "solar", "Willam", "hanson"];
@@ -102,6 +100,7 @@
 
        window.onload = function() {
            const s1 = document.getElementById('selectStaff');
+           const s2 = document.getElementById('batchStaff');
            const opts = [
                new Option("-- 未領取 --", "---"), 
                new Option("⚠️ 標記為遺失 ⚠️", "LOST"), 
@@ -109,6 +108,11 @@
            ];
            opts.forEach(o => s1.add(o.cloneNode(true))); 
            
+           // 批量選單額外加一個「不變更」
+           s2.add(new Option("-- 不變更人員 --", "KEEP"));
+           opts.forEach(o => s2.add(o.cloneNode(true)));
+           s2.value = "KEEP";
+
            const btnGroup = document.getElementById('telcoBtnGroup');
            telcoList.forEach(t => {
                 let btn = document.createElement('button'); btn.className = 'btn'; btn.style.border="1px solid #e2e8f0"; btn.innerText = t;
@@ -154,6 +158,41 @@
            document.getElementById('selectCount').innerText = selectedIndices.size;
        }
 
+       // 批量修改相關
+       function openBatchClaim() {
+           document.getElementById('batchCountText').innerText = selectedIndices.size;
+           document.getElementById('batchStaff').value = "KEEP";
+           document.getElementById('batchLoc').value = "";
+           document.getElementById('batchRemains').value = "";
+           document.getElementById('batchClaimModal').style.display = 'flex';
+       }
+
+       function confirmBatchClaim() {
+           let r_v = document.getElementById('batchRemains').value.trim();
+           if(r_v && !isNaN(r_v)) r_v += " GB";
+           const l_v = document.getElementById('batchLoc').value.trim();
+           const s_v = document.getElementById('batchStaff').value;
+
+           selectedIndices.forEach(idx => {
+               const r = simRecords[idx];
+               if(r_v) r.remains = r_v;
+               if(l_v) r.location = l_v;
+               
+               if(s_v !== "KEEP") {
+                   if(s_v === "LOST") { r.usage = "遺失"; r.staff = "---"; r.location = "---"; }
+                   else { r.usage = (s_v === "---") ? "在庫" : "已領用"; r.staff = s_v; }
+               }
+               logAction(idx, "批量修改內容");
+               updateTime(idx);
+           });
+
+           setDirty(true);
+           closeModal('batchClaimModal');
+           selectedIndices.clear();
+           document.getElementById('selectAll').checked = false;
+           render();
+       }
+
        function openEditModal(idx) {
            currentIdx = idx; const r = simRecords[idx];
            document.getElementById('modalTitle').innerText = "編輯 " + r.id;
@@ -194,6 +233,16 @@
                 await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(simRecords) });
                 setDirty(false); setTimeout(() => { alert("✅ 同步成功"); loadData(); }, 1000);
            } catch(e) { alert("同步失敗"); }
+           toggleLoader(false);
+       }
+
+       async function showHistoryLog() {
+           toggleLoader(true);
+           try {
+                const res = await fetch(GAS_URL + "?type=getLogs&t=" + new Date().getTime());
+                const logs = await res.json();
+                alert("最近紀錄：\n" + logs.slice(0, 10).map(l => l.time + ": " + l.action).join("\n"));
+           } catch(e) { alert("讀取紀錄失敗"); }
            toggleLoader(false);
        }
 
