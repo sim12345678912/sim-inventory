@@ -2,83 +2,53 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIM Cloud - 雲端管理系統</title>
+    <title>SIM Cloud - 管理系統</title>
     <style>
-        body { font-family: system-ui, -apple-system, sans-serif; background-color: #f1f5f9; padding: 20px; color: #334155; margin: 0; }
+        body { font-family: sans-serif; background-color: #f1f5f9; padding: 20px; color: #334155; }
         .container { max-width: 1400px; margin: 0 auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
-        
-        /* 統計卡片 */
         .dashboard { display: flex; gap: 15px; margin-bottom: 20px; }
         .stat-card { background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; flex: 1; text-align: center; }
-        .stat-card .label { font-size: 12px; color: #64748b; font-weight: bold; margin-bottom: 5px; }
-        .stat-card .value { font-size: 28px; font-weight: 900; color: #1e293b; }
-
         .header-box { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        h1 { margin: 0; font-size: 24px; }
-        h1 span { color: #3b82f6; }
-
-        .tool-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; background: #f8fafc; padding: 12px; border-radius: 15px; }
-        .search-box { flex: 1; padding: 10px 15px; border: 2px solid #e2e8f0; border-radius: 10px; outline: none; }
-        
-        .btn { padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; border: none; display: inline-flex; align-items: center; gap: 5px; font-size: 14px; }
-        .btn-refresh { background: #fff; border: 1px solid #e2e8f0; color: #475569; }
-        .btn-excel { background: #10b981; color: white; }
+        .btn { padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; border: none; font-size: 14px; }
         .btn-sync { background: #f59e0b; color: white; }
         .btn-log { background: #6366f1; color: white; }
-
-        table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        th { background: #1e293b; color: #94a3b8; padding: 15px 10px; text-align: left; font-size: 12px; }
-        td { padding: 12px 10px; border-bottom: 1px solid #f1f5f9; }
-        
-        .badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
-        .badge-stock { background: #dcfce7; color: #166534; }
-        .badge-used { background: #dbeafe; color: #1e40af; }
-
-        /* 彈窗樣式 */
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #1e293b; color: #94a3b8; padding: 12px; text-align: left; }
+        td { padding: 12px; border-bottom: 1px solid #f1f5f9; }
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
-        .modal-content { background: white; padding: 30px; border-radius: 20px; width: 450px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
-        .modal-content h2 { margin-top: 0; color: #3b82f6; }
-        label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; color: #475569; }
-        input, select { width: 100%; padding: 12px; border: 2px solid #f1f5f9; border-radius: 10px; margin-bottom: 20px; box-sizing: border-box; }
+        .modal-content { background: white; padding: 30px; border-radius: 20px; width: 400px; }
+        input, select { width: 100%; padding: 10px; margin: 10px 0 20px 0; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box; }
     </style>
 </head>
 <body>
 
     <div class="container">
         <div class="dashboard">
-            <div class="stat-card"><div class="label">總卡片</div><div class="value">30</div></div>
-            <div class="stat-card"><div class="label">在庫</div><div class="value" style="color:#10b981">26</div></div>
-            <div class="stat-card"><div class="label">已領用</div><div class="value" style="color:#3b82f6">4</div></div>
+            <div class="stat-card"><div>總卡片</div><div style="font-size:24px; font-weight:bold;">30</div></div>
+            <div class="stat-card"><div>在庫</div><div style="font-size:24px; font-weight:bold; color:#10b981">26</div></div>
+            <div class="stat-card"><div>已領用</div><div style="font-size:24px; font-weight:bold; color:#3b82f6">4</div></div>
         </div>
 
         <div class="header-box">
-            <h1>SIM <span>Cloud</span></h1>
+            <h1>SIM <span style="color:#3b82f6">Cloud</span></h1>
             <div style="display: flex; gap: 10px;">
-                <button onclick="loadData()" class="btn btn-refresh">🔄 刷新</button>
                 <button onclick="openHistory()" class="btn btn-log">📜 翻查紀錄</button>
-                <button onclick="exportToExcel()" class="btn btn-excel">📥 匯出 Excel</button>
                 <button onclick="uploadData()" class="btn btn-sync">💾 儲存並同步</button>
             </div>
         </div>
 
-        <div class="tool-bar">
-            <input type="text" id="searchInput" class="search-box" placeholder="🔍 搜尋 ID、人員或電訊商..." oninput="render()">
-            <button id="batchBtn" onclick="openBatchModal()" class="btn" style="background:#2563eb; color:white; display:none;">🎁 批量領取 (<span id="selCount">0</span>)</button>
-        </div>
+        <button id="batchBtn" onclick="openBatchModal()" class="btn" style="background:#2563eb; color:white; display:none; margin-bottom:10px;">🎁 批量領取 (<span id="selCount">0</span>)</button>
 
         <table>
             <thead>
                 <tr>
                     <th style="width:40px;"><input type="checkbox" onchange="toggleAll(this)"></th>
                     <th>編號</th>
-                    <th>狀態</th>
                     <th>電訊商</th>
                     <th>可用量</th>
                     <th>使用地點</th>
                     <th>領取人</th>
                     <th>更新時間</th>
-                    <th>操作</th>
                 </tr>
             </thead>
             <tbody id="simTable"></tbody>
@@ -87,35 +57,36 @@
 
     <div id="batchModal" class="modal">
         <div class="modal-content">
-            <h2>🎁 批量領取</h2>
+            <h2 style="margin-top:0">🎁 批量領取確認</h2>
             <label>領取人員</label>
-            <select id="batchStaff"></select>
+            <select id="batchStaff">
+                <option value="Leo">Leo</option><option value="Mason">Mason</option>
+                <option value="Mayce">Mayce</option><option value="Sherman">Sherman</option>
+                <option value="ting ting">ting ting</option><option value="Jenna">Jenna</option>
+                <option value="Roy">Roy</option><option value="Arron">Arron</option>
+                <option value="solar">solar</option><option value="Willam">Willam</option>
+                <option value="hanson">hanson</option>
+            </select>
             <label>使用地點</label>
-            <input type="text" id="batchLoc" placeholder="例如：櫃桶、分公司">
-            <label>更新可用量 (選填)</label>
-            <input type="text" id="batchRemains" placeholder="輸入數字，自動補 GB">
+            <input type="text" id="batchLoc" placeholder="輸入地點 (例如：櫃桶)">
+            
             <div style="display: flex; gap: 10px;">
                 <button onclick="closeModal()" class="btn" style="flex:1; background:#f1f5f9;">取消</button>
-                <button onclick="confirmBatch()" class="btn" style="flex:1; background:#2563eb; color:white;">確認領取</button>
+                <button onclick="confirmBatchClaim()" class="btn" style="flex:1; background:#2563eb; color:white;">確認領取</button>
             </div>
         </div>
     </div>
 
     <script>
-        // 配置區域
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzj267eGvH4IA8Ra5W35K56tjKCOdNU_VEB42AwYFcERh3qBtCBOoziwjQAgYanvNWW/exec";
-        const userList = ["Leo", "Mason", "Mayce", "Sherman", "ting ting", "Jenna", "Roy", "Arron", "solar", "Willam", "hanson"];
         let simRecords = [];
         let selectedIndices = new Set();
 
         window.onload = function() {
             alert("Mason is watching you 👀");
-            const select = document.getElementById('batchStaff');
-            userList.forEach(u => select.add(new Option(u, u)));
             loadData();
         };
 
-        // 翻查紀錄按鈕功能
         function openHistory() {
             window.open("https://docs.google.com/spreadsheets/d/1QsQ19xSbsMXjcSa7hzItjOiQnwEoVtwpP3oPfcAp3MM/edit?hl=zh-tw&gid=0#gid=0");
         }
@@ -130,51 +101,45 @@
 
         function render() {
             const tbody = document.getElementById('simTable');
-            const kw = document.getElementById('searchInput').value.toLowerCase();
-            
-            tbody.innerHTML = simRecords.map((r, i) => {
-                const isMatch = r.id.toLowerCase().includes(kw) || (r.staff||"").toLowerCase().includes(kw) || (r.telco||"").toLowerCase().includes(kw);
-                if (!isMatch) return "";
-                
-                const isUsed = r.staff && r.staff !== "---";
-                return `<tr>
+            tbody.innerHTML = simRecords.map((r, i) => `
+                <tr>
                     <td><input type="checkbox" onchange="toggleRow(${i})" ${selectedIndices.has(i) ? 'checked' : ''}></td>
-                    <td style="font-weight:bold;">${r.id}</td>
-                    <td><span class="badge ${isUsed ? 'badge-used' : 'badge-stock'}">${isUsed ? '已領用' : '在庫'}</span></td>
+                    <td>${r.id}</td>
                     <td>${r.telco}</td>
                     <td>${r.remains}</td>
                     <td>${r.location || '---'}</td>
                     <td style="color:#2563eb; font-weight:bold;">${r.staff || '---'}</td>
                     <td style="font-size:11px; color:#94a3b8;">${r.date || '---'}</td>
-                    <td><button class="btn" style="padding:4px 8px; background:#334155; color:white;">改</button></td>
-                </tr>`;
-            }).join('');
-
+                </tr>
+            `).join('');
             document.getElementById('batchBtn').style.display = selectedIndices.size > 0 ? 'inline-flex' : 'none';
             document.getElementById('selCount').innerText = selectedIndices.size;
         }
 
-       function confirmBatch() {
-    console.log("按鈕已觸發"); // 檢查用
-    
-    // 獲取彈窗資料
-    const staff = document.getElementById('batchStaff').value;
-    const loc = document.getElementById('batchLoc').value || "---";
-    
-    // 最簡單的更新邏輯
-    selectedIndices.forEach(idx => {
-        simRecords[idx].staff = staff;
-        simRecords[idx].location = loc;
-        simRecords[idx].date = new Date().toLocaleString('zh-HK');
-        simRecords[idx].action = "領取: " + staff;
-    });
+        // --- 核心修正：名字與按鈕對應，並加入 Action LOGS ---
+        function confirmBatchClaim() {
+            const staff = document.getElementById('batchStaff').value;
+            const loc = document.getElementById('batchLoc').value || "---";
 
-    selectedIndices.clear();
-    render();
-    closeModal();
-    alert("本地更新成功！");
-}
-        // 其他功能函數
+            selectedIndices.forEach(idx => {
+                const r = simRecords[idx];
+                const oldStaff = r.staff || "---";
+                
+                // 產生操作描述 (Action)
+                r.action = (oldStaff === "---") ? `由 ${staff} 領取 (地點: ${loc})` : `由 ${oldStaff} 轉交給 ${staff} (地點: ${loc})`;
+                
+                // 更新資料
+                r.staff = staff;
+                r.location = loc;
+                r.date = new Date().toLocaleString('zh-HK', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'});
+            });
+
+            selectedIndices.clear();
+            render();
+            closeModal();
+            alert("✅ 領取成功！請按『儲存並同步』寫入試算表。");
+        }
+
         function toggleRow(i) { selectedIndices.has(i) ? selectedIndices.delete(i) : selectedIndices.add(i); render(); }
         function toggleAll(el) { selectedIndices.clear(); if (el.checked) simRecords.forEach((_, i) => selectedIndices.add(i)); render(); }
         function openBatchModal() { document.getElementById('batchModal').style.display = 'flex'; }
@@ -186,15 +151,6 @@
                 await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(simRecords) });
                 alert("✅ 同步成功！");
             } catch(e) { alert("❌ 同步失敗"); }
-        }
-
-        function exportToExcel() {
-            let csv = "\uFEFF編號,狀態,電訊商,可用量,使用地點,領取人,更新時間,操作內容\n";
-            simRecords.forEach(r => csv += `${r.id},${r.staff==='---'?'在庫':'已領用'},${r.telco},${r.remains},${r.location},${r.staff},${r.date},${r.action||''}\n`);
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-            link.download = `SIM_Inventory.csv`;
-            link.click();
         }
     </script>
 </body>
