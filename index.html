@@ -233,22 +233,32 @@
             document.getElementById('batchClaimModal').style.display = 'flex'; 
         }
  
-        function confirmBatchClaim() {
-            let r_val = document.getElementById('batchRemains').value.trim();
-            const l_val = document.getElementById('batchLoc').value.trim();
-            const s_val = document.getElementById('batchStaff').value;
-            if (r_val && !isNaN(r_val)) r_val += " GB";
-            selectedIndices.forEach(idx => { 
-                if (r_val) simRecords[idx].remains = r_val; 
-                if (l_val) simRecords[idx].location = l_val; 
-                if (s_val !== "") {
-                    simRecords[idx].staff = s_val;
-                    simRecords[idx].usage = (s_val === "---") ? "在庫" : "已領用";
-                }
-                updateTime(idx); 
-            });
-            setDirty(true); closeModal('batchClaimModal'); render();
-        }
+    function confirmBatch() {
+    const staff = document.getElementById('batchStaff').value;
+    const loc = document.getElementById('batchLoc').value || "---";
+    let rem = document.getElementById('batchRemains').value;
+    if (rem && !isNaN(rem)) rem += " GB";
+
+    selectedIndices.forEach(idx => {
+        // --- 新增：產生動作描述 ---
+        const oldStaff = simRecords[idx].staff;
+        const actionDesc = (oldStaff === "---") 
+            ? `由 ${staff} 領取 (地點: ${loc})` 
+            : `由 ${oldStaff} 轉交給 ${staff}`;
+        
+        // --- 更新資料 ---
+        simRecords[idx].staff = staff;
+        simRecords[idx].location = loc;
+        if (rem) simRecords[idx].remains = rem;
+        simRecords[idx].date = new Date().toLocaleString('zh-HK');
+        simRecords[idx].action = actionDesc; // 將描述存入 action 屬性
+    });
+
+    selectedIndices.clear();
+    render();
+    closeModal();
+    alert("本地紀錄已更新，請按『儲存並同步』寫入試算表。");
+}
  
         function batchReset() {
             if(confirm(`確定將選中的 ${selectedIndices.size} 項歸還為「在庫」狀態？\n(會清空使用地點與人員)`)) {
