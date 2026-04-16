@@ -3,7 +3,7 @@
 <head>
    <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>SIM 雲端管理系統 V3.3</title>
+   <title>SIM 雲端管理系統 V10.1</title>
    <style>
        body { font-family: system-ui, -apple-system, sans-serif; background-color: #f1f5f9; padding: 20px; color: #334155; margin: 0; }
        .container { max-width: 1350px; margin: 0 auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
@@ -95,8 +95,7 @@
         <div class="modal-content" style="max-width: 850px; width: 95%;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h2>系統操作紀錄 (最近 1000 則)</h2>
-                <button onclick="clearHistoryLog()" class="btn" style="background:#fee2e2; color:#b91c1c;">清空紀錄</button>
-            </div>
+                </div>
             <div class="history-table-container">
                 <table style="table-layout: auto;">
                     <thead style="position: sticky; top: 0; z-index: 10;">
@@ -117,6 +116,7 @@
    <div id="editModal" class="modal"><div class="modal-content"><h2 id="modalTitle">編輯</h2><label>可用量 (GB)</label><input type="text" id="inputUsageVal"><label>地點</label><input type="text" id="inputLoc"><label>人員</label><select id="selectStaff"></select><div style="display:flex;gap:10px;"><button onclick="closeModal('editModal')" class="btn">取消</button><button onclick="confirmSave()" class="btn" style="background:#2563eb;color:white;">儲存</button></div></div></div>
 
    <script>
+       // 請記得在下面貼上你最新的 Google Apps Script URL (以 /exec 結尾的那條)
        const GAS_URL = "https://script.google.com/macros/s/AKfycbzRIrpfG79dEa1wtCokhLoZKir7tT7zHQawJW7-kon2oKug32Zhhp0nP_MOdm6fF3oX/exec";
        const userList = ["Leo", "Mason", "Mayce", "Sherman", "ting ting", "Jenna", "Roy", "Arron", "solar", "Willam", "hanson"];
        const telcoList = ["CSL", "3HK", "SmarTone", "CMHK", "Lucky SIM", "MORE", "鴨聊佳"];
@@ -125,7 +125,6 @@
        let selectedIndices = new Set(); 
        let currentIdx = null; 
        let isDirty = false;
-       
        let historyLogs = JSON.parse(localStorage.getItem('sim_history_logs')) || [];
 
        function formatDate(str) {
@@ -166,17 +165,14 @@
                year: 'numeric', month: '2-digit', day: '2-digit', 
                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false 
            });
-           
            const recordId = simRecords[idx].id;
            let fullMsg = `[卡號 ${recordId}] ${msg}`;
            if(customDiff) fullMsg += ` (${customDiff})`;
-           
            simRecords[idx].action = `[${timeStr}] ${msg}`;
-           
            const logEntry = { time: timeStr, action: fullMsg };
            historyLogs.unshift(logEntry);
            
-           // --- 已更新上限為 1000 則 ---
+           // 上限 1000 則
            if (historyLogs.length > 1000) historyLogs.pop();
            localStorage.setItem('sim_history_logs', JSON.stringify(historyLogs));
        }
@@ -196,14 +192,6 @@
            document.getElementById('historyLogModal').style.display = 'flex';
        }
 
-       function clearHistoryLog() {
-           if(confirm("確定要清空本地所有 1000 則紀錄嗎？")) {
-               historyLogs = [];
-               localStorage.removeItem('sim_history_logs');
-               showHistoryLog();
-           }
-       }
-
        function openHistory() { window.open("https://docs.google.com/spreadsheets/d/1QsQ19xSbsMXjcSa7hzItjOiQnwEoVtwpP3oPfcAp3MM/edit#gid=0"); }
        function toggleLoader(s) { document.getElementById('loader').style.display = s ? 'flex' : 'none'; }
        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
@@ -219,7 +207,7 @@
                 const res = await fetch(GAS_URL + "?t=" + new Date().getTime());
                 const data = await res.json();
                 simRecords = data.map(r => ({ ...r, expiry: formatDate(r.expiry), action: r.action || "---" }));
-           } catch(e) { alert("讀取失敗"); }
+           } catch(e) { alert("讀取失敗，請檢查 GAS 網址是否正確。"); }
            render(); toggleLoader(false);
        }
 
@@ -272,17 +260,12 @@
            if(r_v && !isNaN(r_v)) r_v += " GB";
            const l_v = document.getElementById('batchLoc').value.trim();
            const s_v = document.getElementById('batchStaff').value;
-           
            selectedIndices.forEach(idx => {
                let changes = [];
                if(r_v && simRecords[idx].remains !== r_v) { changes.push(`用量:${simRecords[idx].remains}→${r_v}`); simRecords[idx].remains = r_v; }
                if(l_v && simRecords[idx].location !== l_v) { changes.push(`地點:${simRecords[idx].location}→${l_v}`); simRecords[idx].location = l_v; }
                if(s_v !== "" && simRecords[idx].staff !== s_v) { changes.push(`人員:${simRecords[idx].staff}→${s_v}`); simRecords[idx].staff = s_v; simRecords[idx].usage = (s_v==="---"?"在庫":"已領用"); }
-               
-               if(changes.length > 0) {
-                   logAction(idx, "批量修改", changes.join(", "));
-                   updateTime(idx);
-               }
+               if(changes.length > 0) { logAction(idx, "批量修改", changes.join(", ")); updateTime(idx); }
            });
            setDirty(true); closeModal('batchClaimModal'); render();
        }
@@ -335,15 +318,12 @@
            let newV = document.getElementById('inputUsageVal').value.trim();
            if(newV && !isNaN(newV)) newV += " GB";
            if(!newV) newV = "---";
-           
            const newL = document.getElementById('inputLoc').value.trim() || "---";
            const newS = document.getElementById('selectStaff').value;
-           
            let changes = [];
            if(r.remains !== newV) changes.push(`用量:${r.remains}→${newV}`);
            if(r.location !== newL) changes.push(`地點:${r.location}→${newL}`);
            if(r.staff !== newS) changes.push(`人員:${r.staff}→${newS}`);
-           
            if(changes.length > 0) {
                r.remains = newV; r.location = newL; r.staff = newS;
                r.usage = (r.staff === "---") ? "在庫" : "已領用";
