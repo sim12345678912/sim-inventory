@@ -3,7 +3,7 @@
 <head>
    <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>SIM 管理系統 V3.7-BATCH-READY</title>
+   <title>SIM 管理系統 V3.8-FIXED</title>
    <style>
        body { font-family: system-ui, -apple-system, sans-serif; background-color: #f1f5f9; padding: 20px; color: #334155; margin: 0; }
        .container { max-width: 1350px; margin: 0 auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
@@ -107,8 +107,6 @@
                ...userList.map(n => new Option(n, n))
            ];
            opts.forEach(o => s1.add(o.cloneNode(true))); 
-           
-           // 批量選單額外加一個「不變更」
            s2.add(new Option("-- 不變更人員 --", "KEEP"));
            opts.forEach(o => s2.add(o.cloneNode(true)));
            s2.value = "KEEP";
@@ -121,6 +119,13 @@
            });
            loadData();
        };
+
+       function formatDate(str) {
+           if (!str || str === "---") return "---";
+           const d = new Date(str);
+           if (isNaN(d)) return str;
+           return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+       }
 
        function render() {
            const tbody = document.getElementById('simTable'); 
@@ -143,7 +148,7 @@
                     <td style="font-weight:bold; color:#94a3b8;">${r.id}</td>
                     <td>${badgeHTML}</td>
                     <td><b>${r.telco}</b><div class="quick-edit-btn" onclick="currentIdx=${i}; document.getElementById('telcoModal').style.display='flex';">✏️</div></td>
-                    <td>${r.remains}</td><td>${r.expiry}</td>
+                    <td>${r.remains}</td><td>${formatDate(r.expiry)}</td>
                     <td>${r.location}</td><td style="color:#2563eb; font-weight:900;">${r.staff}</td>
                     <td style="font-size:12px; color:#cbd5e1; text-align:center;">${r.date}</td>
                     <td style="text-align:center;"><button onclick="openEditModal(${i})" class="btn-edit">改</button></td>
@@ -158,7 +163,6 @@
            document.getElementById('selectCount').innerText = selectedIndices.size;
        }
 
-       // 批量修改相關
        function openBatchClaim() {
            document.getElementById('batchCountText').innerText = selectedIndices.size;
            document.getElementById('batchStaff').value = "KEEP";
@@ -177,20 +181,17 @@
                const r = simRecords[idx];
                if(r_v) r.remains = r_v;
                if(l_v) r.location = l_v;
-               
                if(s_v !== "KEEP") {
                    if(s_v === "LOST") { r.usage = "遺失"; r.staff = "---"; r.location = "---"; }
                    else { r.usage = (s_v === "---") ? "在庫" : "已領用"; r.staff = s_v; }
                }
-               logAction(idx, "批量修改內容");
+               r.expiry = formatDate(r.expiry); // 強制格式化日期
+               logAction(idx, "批量修改");
                updateTime(idx);
            });
 
-           setDirty(true);
-           closeModal('batchClaimModal');
-           selectedIndices.clear();
-           document.getElementById('selectAll').checked = false;
-           render();
+           setDirty(true); closeModal('batchClaimModal'); selectedIndices.clear();
+           document.getElementById('selectAll').checked = false; render();
        }
 
        function openEditModal(idx) {
@@ -209,12 +210,12 @@
            const newL = document.getElementById('inputLoc').value.trim() || "---";
            const newS = document.getElementById('selectStaff').value;
 
-           let oldStatus = r.usage;
            if (newS === "LOST") { r.usage = "遺失"; r.staff = "---"; r.location = "---"; }
            else { r.usage = (newS === "---") ? "在庫" : "已領用"; r.staff = newS; r.location = newL; }
            
            r.remains = newV;
-           logAction(currentIdx, `狀態變更: ${oldStatus} → ${r.usage}`);
+           r.expiry = formatDate(r.expiry); // 強制格式化日期
+           logAction(currentIdx, `手動修改`);
            updateTime(currentIdx); setDirty(true); render(); closeModal('editModal');
        }
 
@@ -222,7 +223,9 @@
            toggleLoader(true);
            try {
                 const res = await fetch(GAS_URL + "?t=" + new Date().getTime());
-                simRecords = await res.json(); render();
+                const data = await res.json();
+                simRecords = data.map(r => ({ ...r, expiry: formatDate(r.expiry) })); 
+                render();
            } catch(e) { alert("讀取雲端失敗"); }
            toggleLoader(false);
        }
@@ -230,7 +233,9 @@
        async function uploadData() {
            toggleLoader(true);
            try {
-                await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(simRecords) });
+                // 上傳前最後一次確保所有日期格式正確
+                const cleanData = simRecords.map(r => ({ ...r, expiry: formatDate(r.expiry) }));
+                await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(cleanData) });
                 setDirty(false); setTimeout(() => { alert("✅ 同步成功"); loadData(); }, 1000);
            } catch(e) { alert("同步失敗"); }
            toggleLoader(false);
