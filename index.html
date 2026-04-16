@@ -1,244 +1,155 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIM 雲端管理流水帳系統</title>
+    <title>SIM Management System v3.8</title>
     <style>
-        /* 樣式定義：確保排版整齊 */
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; }
-        .app-container { max-width: 1440px; margin: 0 auto; background: #ffffff; padding: 30px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-        .main-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f0f2f5; padding-bottom: 20px; margin-bottom: 20px; }
-        .main-header h1 { font-size: 24px; color: #1a202c; margin: 0; }
-        .main-header span { color: #3182ce; }
+        body { font-family: -apple-system, sans-serif; background: #f8fafc; margin: 0; padding: 20px; color: #334155; }
+        .container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; border: none; display: flex; align-items: center; gap: 5px; }
+        .btn-sync { background: #f59e0b; color: white; }
+        .btn-sync.dirty { background: #10b981 !important; }
         
-        /* 按鈕樣式 */
-        .btn-group { display: flex; gap: 12px; }
-        .btn { padding: 10px 20px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 14px; }
-        .btn-refresh { background-color: #edf2f7; color: #4a5568; }
-        .btn-save { background-color: #f6ad55; color: white; }
-        .btn-save.is-dirty { background-color: #48bb78 !important; box-shadow: 0 0 12px rgba(72,187,120,0.5); animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
+        /* 回歸深色表格頭部 */
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { background: #334155; color: #f8fafc; padding: 12px; text-align: left; }
+        td { padding: 12px; border-bottom: 1px solid #f1f5f9; }
+        tr:hover { background: #fbfcfd; }
         
-        /* 表格樣式 */
-        .table-wrapper { overflow-x: auto; margin-top: 20px; }
-        table { width: 100%; border-collapse: collapse; text-align: left; table-layout: fixed; }
-        th { background-color: #2d3748; color: #cbd5e0; padding: 15px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
-        td { padding: 15px; border-bottom: 1px solid #edf2f7; font-size: 14px; color: #4a5568; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        
-        /* 流水帳專用：Hover 效果 */
-        .col-action { color: #718096; font-size: 12px; }
-        .col-action:hover { white-space: normal; word-break: break-all; position: relative; background: #fff; z-index: 100; padding: 10px; border: 1px solid #e2e8f0; border-radius: 5px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        
-        /* 彈窗樣式 */
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; }
-        .modal-box { background: white; padding: 40px; border-radius: 20px; width: 450px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
-        .modal-box h2 { margin-top: 0; font-size: 20px; }
-        .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; color: #4a5568; }
-        .form-group input, .form-group select { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
-        
-        #loading-screen { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 2000; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; }
+        /* Action 欄位特殊處理 */
+        .action-history { font-size: 11px; color: #64748b; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .action-history:hover { white-space: normal; word-break: break-all; cursor: help; }
+
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 100; }
+        .modal-content { background: white; padding: 25px; border-radius: 12px; width: 350px; }
+        input, select { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; }
+        #loader { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.7); z-index: 200; align-items: center; justify-content: center; font-weight: bold; }
     </style>
 </head>
 <body>
-
-    <div id="loading-screen">⚙️ 正在處理數據，請稍候...</div>
-
-    <div class="app-container">
-        <header class="main-header">
-            <h1>SIM <span>Management System</span> v3.8</h1>
-            <div class="btn-group">
-                <button class="btn btn-refresh" onclick="fetchData()">🔄 重新讀取</button>
-                <button class="btn btn-save" id="syncBtn" onclick="syncToCloud()">💾 儲存並同步至雲端</button>
-            </div>
-        </header>
-
-        <section class="search-area">
-            <input type="text" id="filterInput" placeholder="🔍 輸入關鍵字搜尋 (ID, 人員, 地點...)" oninput="drawTable()" style="width:100%; padding:15px; border-radius:10px; border:1px solid #e2e8f0; margin-bottom:20px;">
-        </section>
-
-        <div class="table-wrapper">
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 80px;">卡片編號</th>
-                        <th style="width: 120px;">電訊商</th>
-                        <th style="width: 100px;">剩餘用量</th>
-                        <th style="width: 120px;">到期日</th>
-                        <th style="width: 100px;">持有人</th>
-                        <th style="width: 150px;">更新時間</th>
-                        <th>流水帳紀錄 (Action History)</th>
-                        <th style="width: 80px;">操作</th>
-                    </tr>
-                </thead>
-                <tbody id="simGrid"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <div id="editPopup" class="modal-overlay">
-        <div class="modal-box">
-            <h2 id="editTitle">編輯卡片資訊</h2>
-            <div class="form-group">
-                <label>剩餘用量 (數字會自動補上 GB)</label>
-                <input type="text" id="fieldRemains">
-            </div>
-            <div class="form-group">
-                <label>存放地點</label>
-                <input type="text" id="fieldLocation">
-            </div>
-            <div class="form-group">
-                <label>領用人員</label>
-                <select id="fieldStaff"></select>
-            </div>
-            <div style="display: flex; gap: 10px; margin-top: 30px;">
-                <button class="btn btn-refresh" style="flex:1" onclick="closePopup()">取消</button>
-                <button class="btn" style="flex:1; background:#3182ce; color:white;" onclick="processSave()">儲存變更</button>
+    <div id="loader">Processing...</div>
+    <div class="container">
+        <div class="header">
+            <h2>SIM <b>Management System</b> v3.8</h2>
+            <div style="display:flex; gap:10px;">
+                <button onclick="loadData()" class="btn" style="background:#e2e8f0;">🔄 刷新</button>
+                <button onclick="syncData()" id="syncBtn" class="btn btn-sync">💾 儲存並同步至雲端</button>
             </div>
         </div>
+
+        <div style="margin-bottom:15px; display:flex; gap:10px;">
+            <input type="text" id="search" placeholder="🔍 搜尋 ID, 人員..." oninput="render()" style="margin:0; flex:1;">
+            <div id="batchMenu" style="display:none; gap:10px;">
+                <button onclick="openBatchModal()" class="btn" style="background:#2563eb; color:white;">🎁 批量領取</button>
+                <button onclick="batchReturn()" class="btn" style="background:#fee2e2; color:#b91c1c;">🧹 批量歸還</button>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:30px;"><input type="checkbox" id="allBox" onchange="selectAll()"></th>
+                    <th style="width:60px;">編號</th><th style="width:100px;">電訊商</th><th style="width:100px;">可用量</th>
+                    <th style="width:120px;">到期日</th><th style="width:100px;">持有人</th><th style="width:100px;">更新時間</th><th>流水帳紀錄</th><th style="width:60px;">操作</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
     </div>
+
+    <div id="editModal" class="modal"><div class="modal-content"><h3>編輯資訊</h3><label>用量 (GB)</label><input id="editRemains"><label>地點</label><input id="editLoc"><label>人員</label><select id="editStaff"></select><button onclick="saveEdit()" class="btn" style="background:#2563eb; color:white; width:100%; justify-content:center;">儲存</button><button onclick="closeModal()" class="btn" style="width:100%; justify-content:center; margin-top:5px;">取消</button></div></div>
 
     <script>
-        // ---------------------------------------------------------
-        // 配置區：請填入你的 Apps Script 網址
-        // ---------------------------------------------------------
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzcIVqm14RBzQwRNAxbEAG2Xb-G6orPIlPm5W1PKN3Cco2bBFSdvuRSKaMXVccFsV1f/exec";
-        
-        const STAFF_LIST = ["Leo", "Mason", "Mayce", "Sherman", "ting ting", "Jenna", "Roy", "Arron", "solar", "Willam", "hanson"];
-        let rawRecords = [];
-        let activeIndex = null;
+        const API = "https://script.google.com/macros/s/AKfycbzcIVqm14RBzQwRNAxbEAG2Xb-G6orPIlPm5W1PKN3Cco2bBFSdvuRSKaMXVccFsV1f/exec";
+        const STAFFS = ["Leo", "Mason", "Mayce", "Sherman", "ting ting", "Jenna", "Roy", "Arron", "solar", "Willam", "hanson"];
+        let db = [], selected = new Set(), editIdx = null;
 
-        // 初始化
-        window.onload = function() {
-            const dropdown = document.getElementById('fieldStaff');
-            dropdown.add(new Option("-- 請選擇人員 (留空為在庫) --", "---"));
-            STAFF_LIST.forEach(name => dropdown.add(new Option(name, name)));
-            fetchData();
+        // 流水帳累加器
+        function log(idx, msg) {
+            const t = new Date();
+            const ts = `${(t.getMonth()+1).toString().padStart(2,'0')}/${t.getDate().toString().padStart(2,'0')} ${t.getHours().toString().padStart(2,'0')}:${t.getMinutes().toString().padStart(2,'0')}`;
+            const s = db[idx].staff === "---" ? "系統" : db[idx].staff;
+            const entry = `[${ts} ${s} ${msg}]`;
+            db[idx].action = (db[idx].action && db[idx].action !== "---") ? db[idx].action + " > " + entry : entry;
+        }
+
+        window.onload = () => {
+            const sel = document.getElementById('editStaff');
+            sel.add(new Option("-- 未領取 --", "---"));
+            STAFFS.forEach(n => sel.add(new Option(n, n)));
+            loadData();
         };
 
-        // 1. 核心流水帳邏輯：累加模式
-        function addToLog(index, message) {
-            const now = new Date();
-            const timestamp = (now.getMonth() + 1).toString().padStart(2, '0') + "/" + 
-                              now.getDate().toString().padStart(2, '0') + " " + 
-                              now.getHours().toString().padStart(2, '0') + ":" + 
-                              now.getMinutes().toString().padStart(2, '0');
-            
-            const staffName = rawRecords[index].staff === "---" ? "管理員" : rawRecords[index].staff;
-            const logEntry = `[${timestamp} ${staffName}: ${message}]`;
-
-            // 如果已有舊紀錄，用箭頭連結新紀錄
-            if (rawRecords[index].action && rawRecords[index].action !== "---") {
-                rawRecords[index].action = rawRecords[index].action + " > " + logEntry;
-            } else {
-                rawRecords[index].action = logEntry;
-            }
+        async function loadData() {
+            document.getElementById('loader').style.display='flex';
+            const r = await fetch(API + "?t=" + Date.now());
+            db = await r.json();
+            render();
+            document.getElementById('loader').style.display='none';
         }
 
-        // 2. 數據讀取
-        async function fetchData() {
-            showLoader(true);
-            try {
-                const response = await fetch(WEB_APP_URL + "?t=" + Date.now());
-                rawRecords = await response.json();
-                drawTable();
-            } catch (err) {
-                alert("讀取數據失敗，請確認 Apps Script 權限。");
-            }
-            showLoader(false);
-        }
-
-        // 3. 表格渲染
-        function drawTable() {
-            const tbody = document.getElementById('simGrid');
-            const searchTag = document.getElementById('filterInput').value.toLowerCase();
-            
-            let html = "";
-            rawRecords.forEach((item, i) => {
-                // 搜尋過濾
-                if (searchTag && !item.id.toLowerCase().includes(searchTag) && !item.staff.toLowerCase().includes(searchTag)) {
-                    return;
-                }
-
-                html += `<tr>
-                    <td style="font-weight:bold;">${item.id}</td>
-                    <td>${item.telco}</td>
-                    <td>${item.remains}</td>
-                    <td>${item.expiry}</td>
-                    <td style="color:#3182ce; font-weight:800;">${item.staff}</td>
-                    <td style="color:#a0aec0; font-size:11px;">${item.date}</td>
-                    <td class="col-action">${item.action || '---'}</td>
-                    <td><button onclick="showEditPopup(${i})" style="background:#4a5568; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;">編輯</button></td>
+        function render() {
+            const kw = document.getElementById('search').value.toLowerCase();
+            document.getElementById('tableBody').innerHTML = db.map((r, i) => {
+                if(kw && !r.id.toLowerCase().includes(kw) && !r.staff.toLowerCase().includes(kw)) return "";
+                const isSel = selected.has(i);
+                return `<tr style="${isSel?'background:#f0f7ff':''}">
+                    <td><input type="checkbox" ${isSel?'checked':''} onchange="toggle(${i})"></td>
+                    <td><b>${r.id}</b></td><td>${r.telco}</td><td>${r.remains}</td><td>${r.expiry}</td>
+                    <td style="color:#2563eb; font-weight:600;">${r.staff}</td>
+                    <td style="color:#94a3b8; font-size:11px;">${r.date}</td>
+                    <td class="action-history">${r.action || '---'}</td>
+                    <td><button onclick="openEdit(${i})" style="background:#334155; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">改</button></td>
                 </tr>`;
+            }).join('');
+            document.getElementById('batchMenu').style.display = selected.size > 0 ? 'flex' : 'none';
+        }
+
+        function openEdit(i) {
+            editIdx = i; const r = db[i];
+            document.getElementById('editRemains').value = r.remains.replace(" GB","")==="---"?"":r.remains.replace(" GB","");
+            document.getElementById('editLoc').value = r.location==="---"?"":r.location;
+            document.getElementById('editStaff').value = r.staff;
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        function saveEdit() {
+            const r = db[editIdx], ns = document.getElementById('editStaff').value;
+            log(editIdx, r.staff !== ns ? `領取人變更: ${ns}` : `更新數據`);
+            r.staff = ns;
+            r.remains = document.getElementById('editRemains').value ? document.getElementById('editRemains').value + " GB" : "---";
+            r.location = document.getElementById('editLoc').value || "---";
+            r.usage = (ns === "---") ? "在庫" : "已領用";
+            updateTime(editIdx); setDirty(true); closeModal(); render();
+        }
+
+        function batchReturn() {
+            selected.forEach(i => {
+                log(i, "批量歸還");
+                db[i].staff = "---"; db[i].usage = "在庫"; updateTime(i);
             });
-            tbody.innerHTML = html;
+            selected.clear(); setDirty(true); render();
         }
 
-        // 4. 彈窗控制
-        function showEditPopup(index) {
-            activeIndex = index;
-            const data = rawRecords[index];
-            document.getElementById('editTitle').innerText = "編輯卡片 " + data.id;
-            document.getElementById('fieldRemains').value = data.remains.replace(" GB", "") === "---" ? "" : data.remains.replace(" GB", "");
-            document.getElementById('fieldLocation').value = data.location === "---" ? "" : data.location;
-            document.getElementById('fieldStaff').value = data.staff;
-            document.getElementById('editPopup').style.display = 'flex';
+        function updateTime(i) {
+            const t = new Date();
+            db[i].date = `${(t.getMonth()+1).toString().padStart(2,'0')}/${t.getDate().toString().padStart(2,'0')} ${t.getHours().toString().padStart(2,'0')}:${t.getMinutes().toString().padStart(2,'0')}`;
+        }
+        function setDirty(d) { document.getElementById('syncBtn').classList.toggle('dirty', d); }
+        function closeModal() { document.getElementById('editModal').style.display = 'none'; }
+        function toggle(i) { selected.has(i) ? selected.delete(i) : selected.add(i); render(); }
+        function selectAll() {
+            const c = document.getElementById('allBox').checked;
+            selected.clear(); if(c) db.forEach((_,i)=>selected.add(i)); render();
         }
 
-        function closePopup() {
-            document.getElementById('editPopup').style.display = 'none';
+        async function syncData() {
+            document.getElementById('loader').style.display='flex';
+            await fetch(API, { method: 'POST', mode: 'no-cors', body: JSON.stringify(db) });
+            setDirty(false); alert("✅ 同步成功！");
+            document.getElementById('loader').style.display='none';
         }
-
-        // 5. 儲存邏輯 (包含日誌觸發)
-        function processSave() {
-            const item = rawRecords[activeIndex];
-            const newStaff = document.getElementById('fieldStaff').value;
-            const newRemains = document.getElementById('fieldRemains').value.trim();
-            const newLoc = document.getElementById('fieldLocation').value.trim();
-
-            // 判斷動作類型
-            if (item.staff !== newStaff) {
-                addToLog(activeIndex, `變更持有人至 ${newStaff}`);
-            } else {
-                addToLog(activeIndex, `更新了基本資訊`);
-            }
-
-            // 更新數據
-            item.staff = newStaff;
-            item.remains = newRemains ? (isNaN(newRemains) ? newRemains : newRemains + " GB") : "---";
-            item.location = newLoc || "---";
-            item.usage = (newStaff === "---") ? "在庫" : "已領用";
-            
-            const now = new Date();
-            item.date = (now.getMonth()+1).toString().padStart(2,'0') + "/" + now.getDate().toString().padStart(2,'0') + " " + now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0');
-
-            setIsDirty(true);
-            closePopup();
-            drawTable();
-        }
-
-        // 6. 雲端同步
-        async function syncToCloud() {
-            showLoader(true);
-            try {
-                await fetch(WEB_APP_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify(rawRecords)
-                });
-                setIsDirty(false);
-                alert("✅ 雲端同步完成！流水帳已更新。");
-            } catch (e) {
-                alert("同步失敗，請稍後再試。");
-            }
-            showLoader(false);
-        }
-
-        // 其他工具函數
-        function showLoader(show) { document.getElementById('loading-screen').style.display = show ? 'flex' : 'none'; }
-        function setIsDirty(dirty) { document.getElementById('syncBtn').classList.toggle('is-dirty', dirty); }
-
     </script>
 </body>
 </html>
