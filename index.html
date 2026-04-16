@@ -219,14 +219,27 @@
            render(); toggleLoader(false);
        }
 
-       async function uploadData() {
-           toggleLoader(true);
-           try { 
-               await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(simRecords) }); 
-               setDirty(false); alert("✅ 數據同步成功"); 
-           } catch(e) { alert("同步失敗"); }
-           toggleLoader(false);
-       }
+async function uploadData() {
+    toggleLoader(true);
+    // 這裡要對應 GAS 接收的 payload 結構
+    const payload = {
+        records: simRecords,
+        historyLogs: historyLogs // 將本地存的 200 則紀錄傳上去
+    };
+
+    try { 
+        await fetch(GAS_URL, { 
+            method: 'POST', 
+            mode: 'no-cors', // 配合 GAS 的傳輸特性
+            body: JSON.stringify(payload) 
+        }); 
+        setDirty(false); 
+        alert("✅ 雲端同步成功 (含操作紀錄)"); 
+    } catch(e) { 
+        alert("同步失敗"); 
+    }
+    toggleLoader(false);
+}
 
        function render() {
            const tbody = document.getElementById('simTable'); const kw = document.getElementById('searchInput').value.toLowerCase();
