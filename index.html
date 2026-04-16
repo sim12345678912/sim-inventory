@@ -46,7 +46,7 @@
        .telco-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
        .telco-btn { padding: 12px; border: 2px solid #f1f5f9; border-radius: 10px; background: #fff; cursor: pointer; font-weight: bold; text-align: center; }
        .batch-btn-group { display: none; gap: 10px; } 
-       .admin-footer { margin-top: 40px; padding-top: 20px; border-top: 1px dashed #e2e8f0; display: flex; justify-content: center; align-items: center; }
+       .admin-footer { margin-top: 40px; padding-top: 20px; border-top: 1px dashed #e2e8f0; display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: wrap; }
    </style>
 </head>
 <body>
@@ -62,8 +62,6 @@
            <div style="display: flex; gap: 10px;">
                 <button onclick="showHistoryLog()" class="btn btn-history">📜 操作紀錄</button>
                 <button onclick="loadData()" class="btn btn-refresh">🔄 刷新</button>
-                <button onclick="openHistory()" class="btn btn-log">📊 原始表格</button>
-                <button onclick="exportToExcel()" class="btn btn-excel">📥 匯出 Excel</button>
                 <button onclick="uploadData()" id="syncBtn" class="btn btn-sync">💾 儲存並同步</button>
            </div>
        </div>
@@ -76,22 +74,27 @@
        </div>
        <table>
            <thead>
-                <tr>
-                    <th class="checkbox-cell"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
-                    <th style="width:60px;">編號</th><th style="width:80px;">狀態</th><th style="width:120px;">電訊商</th>
-                    <th style="width:100px;">可用量</th><th style="width:130px;">到期日</th><th>地點</th>
-                    <th style="width:100px;">領取人</th><th style="width:120px; text-align:center">更新時間</th><th style="width:100px; text-align:center">操作</th>
-                </tr>
+               <tr>
+                   <th class="checkbox-cell"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
+                   <th style="width:60px;">編號</th><th style="width:80px;">狀態</th><th style="width:120px;">電訊商</th>
+                   <th style="width:100px;">可用量</th><th style="width:130px;">到期日</th><th>地點</th>
+                   <th style="width:100px;">領取人</th><th style="width:120px; text-align:center">更新時間</th><th style="width:100px; text-align:center">操作</th>
+               </tr>
            </thead>
            <tbody id="simTable"></tbody>
        </table>
-       <div class="admin-footer"><button onclick="resetAllRecords()" class="btn" style="background:#fee2e2; color:#b91c1c; border:1px solid #fecaca; font-size:12px;">⚠️ 重設全表狀態</button></div>
+
+       <div class="admin-footer">
+           <button onclick="openHistory()" class="btn btn-log">📊 原始表格</button>
+           <button onclick="exportToExcel()" class="btn btn-excel">📥 匯出 Excel</button>
+           <button onclick="resetAllRecords()" class="btn" style="background:#fee2e2; color:#b91c1c; border:1px solid #fecaca; font-size:12px;">⚠️ 重設全表狀態</button>
+       </div>
    </div>
 
    <div id="historyLogModal" class="modal">
         <div class="modal-content" style="max-width: 850px; width: 95%;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h2>系統操作紀錄 (最近 200 則)</h2>
+                <h2>系統操作紀錄 (最近 1000 則)</h2>
                 <button onclick="clearHistoryLog()" class="btn" style="background:#fee2e2; color:#b91c1c;">清空紀錄</button>
             </div>
             <div class="history-table-container">
@@ -157,12 +160,11 @@
            loadData();
        };
 
-       // 核心邏輯：比對變更並記錄
        function logAction(idx, msg, customDiff = "") {
            const now = new Date();
            const timeStr = now.toLocaleString('zh-HK', { 
-                year: 'numeric', month: '2-digit', day: '2-digit', 
-                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false 
+               year: 'numeric', month: '2-digit', day: '2-digit', 
+               hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false 
            });
            
            const recordId = simRecords[idx].id;
@@ -173,6 +175,8 @@
            
            const logEntry = { time: timeStr, action: fullMsg };
            historyLogs.unshift(logEntry);
+           
+           // --- 已更新上限為 1000 則 ---
            if (historyLogs.length > 1000) historyLogs.pop();
            localStorage.setItem('sim_history_logs', JSON.stringify(historyLogs));
        }
@@ -193,7 +197,7 @@
        }
 
        function clearHistoryLog() {
-           if(confirm("確定要清空本地所有 200 則紀錄嗎？")) {
+           if(confirm("確定要清空本地所有 1000 則紀錄嗎？")) {
                historyLogs = [];
                localStorage.removeItem('sim_history_logs');
                showHistoryLog();
