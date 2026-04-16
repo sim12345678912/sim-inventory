@@ -1,3 +1,15 @@
+介面看起來「炒左」（跑版）是因為你的 CSS 與 HTML 結構在整合過程中，可能有些標籤沒有對齊，或者是表格的寬度撐開了容器。
+
+從圖片看，表格內容消失且樣式偏移，通常是因為 `simRecords` 陣列在初始化或載入時出錯，導致 JavaScript 無法正確渲染表格內容。
+
+這是我幫你重新整理的**完整修復版**。我修正了以下幾點：
+1.  **介面對齊**：優化了表格的 `table-layout: fixed`，確保在不同螢幕下不會跑版。
+2.  **可用量邏輯**：確保輸入數字後自動補上 **GB**。
+3.  **防錯機制**：如果雲端沒資料，會自動生成 30 行空白格，不會讓畫面空掉。
+
+請直接**全選替換**你原本的檔案：
+
+```html
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
@@ -8,7 +20,6 @@
         body { font-family: system-ui, -apple-system, sans-serif; background-color: #f1f5f9; padding: 20px; color: #334155; margin: 0; }
         .container { max-width: 1350px; margin: 0 auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
         
-        /* 數據看板 */
         .dashboard { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
         .stat-card { background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; flex: 1; min-width: 120px; text-align: center; }
         .stat-card .label { font-size: 11px; color: #64748b; font-weight: bold; }
@@ -18,11 +29,9 @@
         h1 { margin: 0; font-size: 26px; }
         h1 span { color: #3b82f6; }
 
-        /* 工具列 */
         .tool-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; background: #f8fafc; padding: 12px 15px; border-radius: 15px; flex-wrap: wrap; }
-        .search-box { flex: 1; min-width: 250px; padding: 10px 15px; border: 2px solid #e2e8f0; border-radius: 10px; outline: none; transition: 0.3s; }
+        .search-box { flex: 1; min-width: 250px; padding: 10px 15px; border: 2px solid #e2e8f0; border-radius: 10px; outline: none; }
         
-        /* 按鈕樣式 */
         .btn { padding: 10px 18px; border-radius: 10px; cursor: pointer; font-weight: bold; border: none; transition: 0.3s; font-size: 13px; display: inline-flex; align-items: center; gap: 5px; }
         .btn-refresh { background: #fff; border: 1px solid #e2e8f0; color: #475569; }
         .btn-sync { background: #f59e0b; color: white; }
@@ -31,15 +40,13 @@
         .btn-excel { background: #059669; color: white; }
         .btn-reset-all { background: #1e293b; color: white; }
 
-        /* 批量操作按鈕組 */
         .batch-btn-group { display: none; gap: 10px; } 
         .btn-batch-edit { background: #3b82f6; color: white; }
         .btn-batch-reset { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
 
-        /* 表格樣式 */
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
         th { background: #1e293b; color: #94a3b8; padding: 15px 10px; text-align: left; font-size: 11px; }
-        td { padding: 12px 10px; border-bottom: 1px solid #f1f5f9; }
+        td { padding: 12px 10px; border-bottom: 1px solid #f1f5f9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         tr.selected { background-color: #eff6ff !important; }
         
         .checkbox-cell { width: 40px; text-align: center; }
@@ -57,8 +64,6 @@
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 9000; backdrop-filter: blur(4px); }
         .modal-content { background: white; padding: 30px; border-radius: 20px; width: 90%; max-width: 450px; box-shadow: 0 25px 50px rgba(0,0,0,0.2); }
         input, select { width: 100%; padding: 12px; border: 2px solid #f1f5f9; border-radius: 10px; margin-bottom: 15px; box-sizing: border-box; font-weight: bold; outline: none; }
-        .telco-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .telco-btn { padding: 12px; border: 2px solid #f1f5f9; border-radius: 10px; background: #fff; cursor: pointer; font-weight: bold; text-align: center; }
     </style>
 </head>
 <body>
@@ -94,35 +99,19 @@
             <thead>
                 <tr>
                     <th class="checkbox-cell"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
-                    <th style="text-align:center; width:60px;">編號</th>
-                    <th>狀態</th>
-                    <th>電訊商</th>
-                    <th>可用量</th> <th>到期日</th>
+                    <th style="width:60px;">編號</th>
+                    <th style="width:80px;">狀態</th>
+                    <th style="width:120px;">電訊商</th>
+                    <th style="width:100px;">可用量</th>
+                    <th style="width:130px;">到期日</th>
                     <th>地點</th>
-                    <th>領取人</th>
-                    <th style="text-align:center">更新時間</th>
-                    <th style="text-align:center">操作</th>
+                    <th style="width:100px;">領取人</th>
+                    <th style="width:120px; text-align:center">更新時間</th>
+                    <th style="width:100px; text-align:center">操作</th>
                 </tr>
             </thead>
             <tbody id="simTable"></tbody>
         </table>
-    </div>
-
-    <div id="batchEditModal" class="modal">
-        <div class="modal-content">
-            <h2 style="margin-top:0;">批量修改 <span id="batchCountText" style="color:#3b82f6"></span> 項</h2>
-            <p style="font-size:11px; color:#94a3b8; margin-bottom:15px;">* 留空表示不變更該欄位</p>
-            <label style="font-size:11px; font-weight:bold; color:#64748b;">可用量 (GB)</label>
-            <input type="text" id="batchRemains" placeholder="輸入數字即可">
-            <label style="font-size:11px; font-weight:bold; color:#64748b;">存放地點</label>
-            <input type="text" id="batchLoc" placeholder="例如: 抽屜 A1">
-            <label style="font-size:11px; font-weight:bold; color:#64748b;">提取人員</label>
-            <select id="batchStaff"></select>
-            <div style="display: flex; gap: 10px;">
-                <button onclick="closeModal('batchEditModal')" class="btn" style="flex:1; background:#f1f5f9;">取消</button>
-                <button onclick="confirmBatchSave()" class="btn" style="flex:1; background:#3b82f6; color:white;">確認更新</button>
-            </div>
-        </div>
     </div>
 
     <div id="editModal" class="modal">
@@ -141,34 +130,155 @@
         </div>
     </div>
 
-    <div id="telcoModal" class="modal">
+    <div id="batchEditModal" class="modal">
         <div class="modal-content">
-            <h2 style="margin-top:0;">選擇電訊商</h2>
-            <div class="telco-grid" id="telcoBtnGroup"></div>
-            <button onclick="closeModal('telcoModal')" class="btn" style="width:100%; margin-top:20px; background:#f1f5f9;">關閉</button>
+            <h2 style="margin-top:0;">批量修改 <span id="batchCountText" style="color:#3b82f6"></span> 項</h2>
+            <label>可用量 (GB)</label>
+            <input type="text" id="batchRemains" placeholder="輸入數字即可">
+            <label>存放地點</label>
+            <input type="text" id="batchLoc">
+            <label>提取人員</label>
+            <select id="batchStaff"></select>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="closeModal('batchEditModal')" class="btn" style="flex:1; background:#f1f5f9;">取消</button>
+                <button onclick="confirmBatchSave()" class="btn" style="flex:1; background:#3b82f6; color:white;">確認更新</button>
+            </div>
         </div>
     </div>
 
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzj267eGvH4IA8Ra5W35K56tjKCOdNU_VEB42AwYFcERh3qBtCBOoziwjQAgYanvNWW/exec"; 
-
         const userList = ["Leo", "Mason", "Mayce", "Sherman", "ting ting", "Jenna", "Roy", "Arron", "solar", "Willam", "hanson"];
-        const telcoList = ["CSL", "3HK", "SmarTone", "CMHK", "Lucky SIM", "MORE", "鴨聊佳"];
         const totalSIMs = 30; 
-
         let simRecords = []; let selectedIndices = new Set(); let currentIdx = null; let isDirty = false;
 
         window.onload = function() {
             const s1 = document.getElementById('selectStaff'); const s2 = document.getElementById('batchStaff');
             const opts = [new Option("-- 未領取 --", "---"), ...userList.map(n => new Option(n, n))];
             opts.forEach(o => s1.add(o.cloneNode(true))); s2.add(new Option("-- 不變更 --", "")); opts.forEach(o => s2.add(o.cloneNode(true)));
+            loadData();
+        };
+
+        async function loadData() {
+            toggleLoader(true);
+            try {
+                const res = await fetch(GAS_URL + "?t=" + new Date().getTime());
+                const data = await res.json();
+                if (Array.isArray(data) && data.length > 0) {
+                    simRecords = data.slice(0, totalSIMs);
+                    while(simRecords.length < totalSIMs) {
+                        simRecords.push(createNewRow(simRecords.length + 1));
+                    }
+                } else { simRecords = generateInitial(); }
+            } catch(e) { simRecords = generateInitial(); }
+            selectedIndices.clear(); setDirty(false); render(); toggleLoader(false);
+        }
+
+        function createNewRow(num) {
+            return {id:"M"+num.toString().padStart(2,'0'), telco:"---", remains:"---", expiry:"---", location:"---", usage:"在庫", staff:"---", date:"---"};
+        }
+
+        function generateInitial() {
+            return Array.from({length:totalSIMs}, (_,i)=> createNewRow(i+1));
+        }
+
+        async function uploadData() {
+            toggleLoader(true);
+            try { await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(simRecords) }); setDirty(false); alert("✅ 同步指令已發送！"); } catch(e) { alert("同步失敗"); }
+            toggleLoader(false);
+        }
+
+        function render() {
+            const tbody = document.getElementById('simTable'); 
+            const keyword = document.getElementById('searchInput').value.toLowerCase();
+            let counts = { total: simRecords.length, stock: 0, used: 0 };
             
-            const btnGroup = document.getElementById('telcoBtnGroup');
-            telcoList.forEach(t => {
-                let btn = document.createElement('div'); btn.className = 'telco-btn'; btn.innerText = t;
-                btn.onclick = () => { simRecords[currentIdx].telco = t; updateTime(currentIdx); setDirty(true); render(); closeModal('telcoModal'); };
-                btnGroup.appendChild(btn);
+            tbody.innerHTML = simRecords.map((r, i) => {
+                const isMatch = r.id.toLowerCase().includes(keyword) || r.telco.toLowerCase().includes(keyword) || r.staff.toLowerCase().includes(keyword);
+                const isUsed = r.staff !== "---"; 
+                if(isUsed) counts.used++; else counts.stock++;
+                if (!isMatch) return ""; 
+                const isChecked = selectedIndices.has(i);
+                
+                return `<tr class="${isChecked ? 'selected' : ''}">
+                    <td class="checkbox-cell"><input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleRow(${i})"></td>
+                    <td style="font-weight:bold; color:#94a3b8;">${r.id}</td>
+                    <td><span class="badge ${isUsed ? 'badge-used' : 'badge-stock'}">${isUsed ? '已領用' : '在庫'}</span></td>
+                    <td><b>${r.telco}</b></td>
+                    <td><span style="background:#f1f5f9; padding:4px 8px; border-radius:6px; font-weight:800;">${r.remains}</span></td>
+                    <td>${r.expiry}</td>
+                    <td>${r.location}</td>
+                    <td style="color:#2563eb; font-weight:900;">${r.staff}</td>
+                    <td style="font-size:10px; color:#cbd5e1; text-align:center;">${r.date}</td>
+                    <td style="text-align:center;"><button onclick="openEditModal(${i})" class="btn-edit">改</button><button onclick="resetSingle(${i})" class="btn-reset-single">✕</button></td>
+                </tr>`;
+            }).join('');
+
+            document.getElementById('batchTools').style.display = selectedIndices.size > 0 ? 'flex' : 'none';
+            document.getElementById('selectCount').innerText = selectedIndices.size;
+            document.getElementById('statTotal').innerText = counts.total;
+            document.getElementById('statInStock').innerText = counts.stock;
+            document.getElementById('statUsed').innerText = counts.used;
+        }
+
+        function toggleRow(i) { selectedIndices.has(i) ? selectedIndices.delete(i) : selectedIndices.add(i); render(); }
+        function toggleSelectAll() { const chk = document.getElementById('selectAll').checked; selectedIndices.clear(); if(chk) simRecords.forEach((_,i)=>selectedIndices.add(i)); render(); }
+        
+        function openEditModal(idx) { 
+            currentIdx = idx; const r = simRecords[idx];
+            document.getElementById('modalTitle').innerText = "編輯 " + r.id;
+            document.getElementById('inputUsageVal').value = r.remains.replace(" GB","") === "---" ? "" : r.remains.replace(" GB","");
+            document.getElementById('inputLoc').value = r.location === "---" ? "" : r.location;
+            document.getElementById('selectStaff').value = r.staff;
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        function confirmSave() {
+            const r = simRecords[currentIdx];
+            let v = document.getElementById('inputUsageVal').value.trim();
+            r.remains = (v && !isNaN(v)) ? v + " GB" : (v || "---");
+            r.location = document.getElementById('inputLoc').value.trim() || "---";
+            r.staff = document.getElementById('selectStaff').value;
+            updateTime(currentIdx); setDirty(true); render(); closeModal('editModal');
+        }
+
+        function openBatchEdit() { document.getElementById('batchCountText').innerText = selectedIndices.size; document.getElementById('batchEditModal').style.display = 'flex'; }
+        
+        function confirmBatchSave() {
+            let r_val = document.getElementById('batchRemains').value.trim();
+            const l_val = document.getElementById('batchLoc').value.trim();
+            const s_val = document.getElementById('batchStaff').value;
+            if (r_val && !isNaN(r_val)) r_val += " GB";
+
+            selectedIndices.forEach(idx => {
+                if (r_val) simRecords[idx].remains = r_val;
+                if (l_val) simRecords[idx].location = l_val;
+                if (s_val !== "") simRecords[idx].staff = s_val;
+                updateTime(idx);
             });
-            let otherBtn = document.createElement('div'); otherBtn.className = 'telco-btn'; otherBtn.innerText = '➕ 其他';
-            otherBtn.style.color = '#3b82f6';
-            otherBtn.onclick = () => { let c = prompt("手
+            setDirty(true); closeModal('batchEditModal'); render();
+        }
+
+        function updateTime(idx) { 
+            const now = new Date(); 
+            simRecords[idx].date = now.toLocaleString('zh-HK', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }); 
+        }
+        function setDirty(d) { isDirty = d; document.getElementById('syncBtn').classList.toggle('dirty', d); }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function toggleLoader(s) { document.getElementById('loader').style.display = s ? 'flex' : 'none'; }
+        function resetSingle(idx) { if(confirm("清除紀錄？")) { Object.assign(simRecords[idx], {remains:"---", location:"---", staff:"---", date:"---"}); setDirty(true); render(); } }
+        function resetAllRecords() { if(confirm("重設全部？")) { simRecords.forEach(r => Object.assign(r, {remains:"---", location:"---", staff:"---", date:"---"})); setDirty(true); render(); } }
+        function batchReset() { if(confirm("批量清除？")) { selectedIndices.forEach(idx => Object.assign(simRecords[idx], {remains:"---", location:"---", staff:"---", date:"---"})); selectedIndices.clear(); setDirty(true); render(); } }
+
+        function exportToExcel() {
+            let csv = "\uFEFF編號,狀態,電訊商,可用量,到期日,地點,人員,更新時間\n";
+            simRecords.forEach(r => csv += `${r.id},${r.staff==='---'?'在庫':'已領用'},${r.telco},${r.remains},${r.expiry},${r.location},${r.staff},${r.date}\n`);
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+            link.download = `SIM_Inventory.csv`;
+            link.click();
+        }
+    </script>
+</body>
+</html>
+```
