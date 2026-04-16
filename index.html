@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIM 雲端管理系統 - 精準清除版</title>
+    <title>SIM 雲端管理系統 - 批量領取優化版</title>
     <style>
         body { font-family: system-ui, -apple-system, sans-serif; background-color: #f1f5f9; padding: 20px; color: #334155; margin: 0; }
         .container { max-width: 1350px; margin: 0 auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
@@ -28,7 +28,7 @@
         .btn-reset-all { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; padding: 8px 15px; font-size: 12px; }
 
         .batch-btn-group { display: none; gap: 10px; } 
-        .btn-batch-edit { background: #3b82f6; color: white; }
+        .btn-batch-claim { background: #2563eb; color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); } /* 藍色亮點按鈕 */
         .btn-batch-reset { background: #fff1f2; color: #be123c; border: 1px solid #fecaca; }
         
         table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
@@ -75,8 +75,8 @@
         <div class="tool-bar">
             <input type="text" id="searchInput" class="search-box" placeholder="🔍 搜尋 ID、人員或電訊商..." oninput="render()">
             <div id="batchTools" class="batch-btn-group">
-                <button onclick="openBatchEdit()" class="btn btn-batch-edit">📝 批量修改 (<span id="selectCount">0</span>)</button>
-                <button onclick="batchReset()" class="btn btn-batch-reset">🧹 批量還原地點人員</button>
+                <button onclick="openBatchClaim()" class="btn btn-batch-claim">🎁 批量領取 (<span id="selectCount">0</span>)</button>
+                <button onclick="batchReset()" class="btn btn-batch-reset">🧹 批量還原在庫</button>
             </div>
         </div>
 
@@ -104,6 +104,27 @@
         </div>
     </div>
 
+    <div id="batchClaimModal" class="modal">
+        <div class="modal-content">
+            <h2 style="margin-top:0; color:#2563eb;">🎁 批量領取 SIM 卡</h2>
+            <p style="font-size:12px; color:#64748b; margin-top:-10px;">選中了 <span id="batchCountText" style="font-weight:900; color:#1e293b;"></span> 張卡片</p>
+            
+            <label>領取人員</label>
+            <select id="batchStaff" style="border: 2px solid #dbeafe; background:#eff6ff; color:#1e40af;"></select>
+
+            <label>存放地點 (選填)</label>
+            <input type="text" id="batchLoc" placeholder="例如：櫃桶、辦公桌">
+
+            <label>剩餘可用量 (如有變動)</label>
+            <input type="text" id="batchRemains" placeholder="輸入數字，自動補上 GB">
+
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button onclick="closeModal('batchClaimModal')" class="btn" style="flex:1; background:#f1f5f9;">取消</button>
+                <button onclick="confirmBatchClaim()" class="btn" style="flex:1; background:#2563eb; color:white;">確認領取</button>
+            </div>
+        </div>
+    </div>
+
     <div id="telcoModal" class="modal">
         <div class="modal-content">
             <h2 style="margin-top:0;">選擇電訊商</h2>
@@ -114,7 +135,7 @@
 
     <div id="editModal" class="modal">
         <div class="modal-content">
-            <h2 id="modalTitle" style="margin-top:0;">編輯資訊</h2>
+            <h2 id="modalTitle" style="margin-top:0;">單張編輯</h2>
             <label>可用量 (GB)</label>
             <input type="text" id="inputUsageVal" placeholder="只需輸入數字">
             <label>地點</label>
@@ -128,22 +149,6 @@
         </div>
     </div>
 
-    <div id="batchEditModal" class="modal">
-        <div class="modal-content">
-            <h2 style="margin-top:0;">批量修改 <span id="batchCountText" style="color:#3b82f6"></span> 項</h2>
-            <label>可用量 (GB)</label>
-            <input type="text" id="batchRemains" placeholder="輸入數字即可">
-            <label>存放地點</label>
-            <input type="text" id="batchLoc">
-            <label>提取人員</label>
-            <select id="batchStaff"></select>
-            <div style="display: flex; gap: 10px;">
-                <button onclick="closeModal('batchEditModal')" class="btn" style="flex:1; background:#f1f5f9;">取消</button>
-                <button onclick="confirmBatchSave()" class="btn" style="flex:1; background:#3b82f6; color:white;">確認更新</button>
-            </div>
-        </div>
-    </div>
-
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzj267eGvH4IA8Ra5W35K56tjKCOdNU_VEB42AwYFcERh3qBtCBOoziwjQAgYanvNWW/exec"; 
         const userList = ["Leo", "Mason", "Mayce", "Sherman", "ting ting", "Jenna", "Roy", "Arron", "solar", "Willam", "hanson"];
@@ -153,8 +158,9 @@
 
         window.onload = function() {
             const s1 = document.getElementById('selectStaff'); const s2 = document.getElementById('batchStaff');
-            const opts = [new Option("-- 未領取 --", "---"), ...userList.map(n => new Option(n, n))];
-            opts.forEach(o => s1.add(o.cloneNode(true))); s2.add(new Option("-- 不變更 --", "")); opts.forEach(o => s2.add(o.cloneNode(true)));
+            const opts = [new Option("-- 保持原樣 / 未領取 --", "---"), ...userList.map(n => new Option(n, n))];
+            opts.forEach(o => s1.add(o.cloneNode(true))); s2.add(new Option("-- 不變更人員 --", "")); opts.slice(1).forEach(o => s2.add(o.cloneNode(true)));
+            
             const btnGroup = document.getElementById('telcoBtnGroup');
             telcoList.forEach(t => {
                 let btn = document.createElement('div'); btn.className = 'telco-btn'; btn.innerText = t;
@@ -215,50 +221,56 @@
             document.getElementById('statUsed').innerText = counts.used;
         }
 
-        // --- 核心邏輯修改區 ---
+        // --- 批量領取功能 ---
+        function openBatchClaim() { 
+            document.getElementById('batchCountText').innerText = selectedIndices.size; 
+            document.getElementById('batchLoc').value = "";
+            document.getElementById('batchRemains').value = "";
+            document.getElementById('batchClaimModal').style.display = 'flex'; 
+        }
 
-        // 批量還原：只清地點和領取人，保留用量和日期資訊
+        function confirmBatchClaim() {
+            let r_val = document.getElementById('batchRemains').value.trim();
+            const l_val = document.getElementById('batchLoc').value.trim();
+            const s_val = document.getElementById('batchStaff').value;
+            if (r_val && !isNaN(r_val)) r_val += " GB";
+
+            selectedIndices.forEach(idx => { 
+                if (r_val) simRecords[idx].remains = r_val; 
+                if (l_val) simRecords[idx].location = l_val; 
+                if (s_val !== "") {
+                    simRecords[idx].staff = s_val;
+                    simRecords[idx].usage = (s_val === "---") ? "在庫" : "已領用";
+                }
+                updateTime(idx); 
+            });
+            setDirty(true); closeModal('batchClaimModal'); render();
+        }
+
+        // --- 還原/重設功能 ---
         function batchReset() {
-            if(confirm(`確定還原選中 ${selectedIndices.size} 項的地點與人員狀態？\n(用量、電訊商與到期日將被保留)`)) {
+            if(confirm(`確定將選中的 ${selectedIndices.size} 項歸還為「在庫」狀態？\n(會清空地點與人員，保留用量與日期)`)) {
                 selectedIndices.forEach(idx => {
-                    simRecords[idx].location = "---";
-                    simRecords[idx].staff = "---";
-                    simRecords[idx].usage = "在庫";
-                    updateTime(idx);
+                    simRecords[idx].location = "---"; simRecords[idx].staff = "---"; simRecords[idx].usage = "在庫"; updateTime(idx);
                 });
-                selectedIndices.clear();
-                setDirty(true);
-                render();
+                selectedIndices.clear(); setDirty(true); render();
             }
         }
-
-        // 單個還原：只清地點和領取人
         function resetSingle(idx) {
-            if(confirm(`確定還原卡片 ${simRecords[idx].id} 的領取狀態？`)) {
-                simRecords[idx].location = "---";
-                simRecords[idx].staff = "---";
-                simRecords[idx].usage = "在庫";
-                updateTime(idx);
-                setDirty(true);
-                render();
+            if(confirm(`確定歸還卡片 ${simRecords[idx].id}？`)) {
+                simRecords[idx].location = "---"; simRecords[idx].staff = "---"; simRecords[idx].usage = "在庫"; updateTime(idx); setDirty(true); render();
             }
         }
-
-        // 重設全表：只清地點和領取人
         function resetAllRecords() {
-            if(confirm("⚠️ 確定要重設全表所有卡片的領用狀態嗎？\n(這會將所有地點與領取人清空，但保留用量與日期資訊)")) {
+            if(confirm("⚠️ 警告：這將會清除全表所有人的領取紀錄，並設為「在庫」！")) {
                 simRecords.forEach((_, idx) => {
-                    simRecords[idx].location = "---";
-                    simRecords[idx].staff = "---";
-                    simRecords[idx].usage = "在庫";
-                    updateTime(idx);
+                    simRecords[idx].location = "---"; simRecords[idx].staff = "---"; simRecords[idx].usage = "在庫"; updateTime(idx);
                 });
-                setDirty(true);
-                render();
+                setDirty(true); render();
             }
         }
 
-        // --- 其他輔助功能 ---
+        // --- 基礎工具 ---
         function toggleRow(i) { selectedIndices.has(i) ? selectedIndices.delete(i) : selectedIndices.add(i); render(); }
         function toggleSelectAll() { const chk = document.getElementById('selectAll').checked; selectedIndices.clear(); if(chk) simRecords.forEach((_,i)=>selectedIndices.add(i)); render(); }
         function openEditModal(idx) { 
@@ -278,21 +290,6 @@
             updateTime(currentIdx); setDirty(true); render(); closeModal('editModal');
         }
         function quickEditExpiry(idx) { const val = prompt(`修改到期日 (YYYY/MM/DD):`, simRecords[idx].expiry === "---" ? "" : simRecords[idx].expiry); if (val !== null) { simRecords[idx].expiry = val.trim() || "---"; updateTime(idx); setDirty(true); render(); } }
-        function openBatchEdit() { document.getElementById('batchCountText').innerText = selectedIndices.size; document.getElementById('batchEditModal').style.display = 'flex'; }
-        function confirmBatchSave() {
-            let r_val = document.getElementById('batchRemains').value.trim(); const l_val = document.getElementById('batchLoc').value.trim(); const s_val = document.getElementById('batchStaff').value;
-            if (r_val && !isNaN(r_val)) r_val += " GB";
-            selectedIndices.forEach(idx => { 
-                if (r_val) simRecords[idx].remains = r_val; 
-                if (l_val) simRecords[idx].location = l_val; 
-                if (s_val !== "") {
-                    simRecords[idx].staff = s_val;
-                    simRecords[idx].usage = (s_val === "---") ? "在庫" : "已領用";
-                }
-                updateTime(idx); 
-            });
-            setDirty(true); closeModal('batchEditModal'); render();
-        }
         function updateTime(idx) { const now = new Date(); simRecords[idx].date = now.toLocaleString('zh-HK', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }); }
         function setDirty(d) { isDirty = d; document.getElementById('syncBtn').classList.toggle('dirty', d); }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
