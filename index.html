@@ -3,13 +3,12 @@
 <head>
    <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>SIM 管理系統 V4.98 - 終極版</title>
+   <title>SIM 管理系統 V4.97 - 終極修復版</title>
    <style>
        /* 樣式設定：維持大字體與清晰排版 */
        body { font-family: system-ui, -apple-system, sans-serif; background-color: #f1f5f9; padding: 20px; color: #334155; margin: 0; }
        .container { max-width: 1400px; margin: 0 auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
        
-       /* 頂部數據卡片 */
        .dashboard { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
        .stat-card { background: #f8fafc; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; flex: 1; min-width: 120px; text-align: center; }
        .stat-card .label { font-size: 40px; color: #64748b; font-weight: bold; }
@@ -19,11 +18,9 @@
        h1 { margin: 0; font-size: 45px; }
        h1 span { color: #3b82f6; }
        
-       /* 工具列 */
        .tool-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; background: #f8fafc; padding: 12px 15px; border-radius: 15px; flex-wrap: wrap; }
        .search-box { flex: 1; min-width: 250px; padding: 10px 15px; border: 2px solid #e2e8f0; border-radius: 10px; outline: none; font-size: 20px; }
        
-       /* 按鈕樣式 */
        .btn { padding: 12px 20px; border-radius: 10px; cursor: pointer; font-weight: bold; border: none; transition: 0.3s; font-size: 14px; display: inline-flex; align-items: center; gap: 5px; }
        .btn-refresh { background: #fff; border: 1px solid #e2e8f0; color: #475569; }
        .btn-sync { background: #10b981; color: white; font-size: 16px; }
@@ -31,13 +28,11 @@
        
        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
        
-       /* 表格樣式 */
        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
        th { background: #1e293b; color: #94a3b8; padding: 15px 10px; text-align: left; font-weight: bold; font-size: 26px; }
        td { padding: 15px 10px; border-bottom: 1px solid #f1f5f9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 20px; }
        tr.selected { background-color: #eff6ff !important; }
        
-       /* 狀態標籤 */
        .badge { padding: 6px 10px; border-radius: 8px; font-size: 16px; font-weight: 900; }
        .badge-stock { background: #dcfce7; color: #166534; }
        .badge-used { background: #dbeafe; color: #1e40af; }
@@ -46,7 +41,6 @@
        .quick-edit-btn { display: inline-flex; align-items: center; justify-content: center; width: 25px; height: 25px; margin-left: 5px; background: #f1f5f9; border-radius: 5px; cursor: pointer; color: #94a3b8; border: 1px solid #e2e8f0; font-size: 12px; }
        .btn-edit { background: #334155; color: white; padding: 10px 18px; border-radius: 8px; cursor:pointer; border:none; font-size: 18px; }
        
-       /* 彈窗與加載中 */
        #loader { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.85); backdrop-filter: blur(5px); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; }
        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 9000; backdrop-filter: blur(4px); }
        .modal-content { background: white; padding: 30px; border-radius: 20px; width: 90%; max-width: 480px; }
@@ -79,7 +73,7 @@
            <input type="text" id="searchInput" class="search-box" placeholder="🔍 搜尋 ID、人員、地點..." oninput="render()">
            <div id="batchTools" style="display:none; gap:10px;">
                 <button onclick="openBatchClaim()" class="btn" style="background:#2563eb;color:white; font-size: 16px;">🎁 批量修改 (<span id="selectCount">0</span>)</button>
-               <button onclick="batchReset()" class="btn" style="background:#fff1f2; color:#be123c; border:1px solid #fecaca;">🧹 批量歸還</button>
+                <button onclick="batchReset()" class="btn" style="background:#fff1f2; color:#be123c; border:1px solid #fecaca;">🧹 批量歸還</button>
            </div>
        </div>
 
@@ -103,14 +97,13 @@
    <div id="telcoModal" class="modal"><div class="modal-content"><h2>選擇電訊商</h2><div id="telcoBtnGroup" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"></div><button onclick="closeModal('telcoModal')" class="btn" style="width:100%;margin-top:20px;">關閉</button></div></div>
 
    <script>
-       // 請換成你部署後的 GAS URL
+       // 使用你原本的 GAS URL
        const GAS_URL = "https://script.google.com/macros/s/AKfycbxbTyCs6tZlDTru5dy-bErsCQXdYRRWnPs7Ctkv5aj5pV-1oEZST32NkX2tQw0v26hL/exec"; 
 
        const userList = ["Leo", "Mason", "Mayce", "Sherman", "ting ting", "Jenna", "Roy", "Arron", "solar", "Willam", "hanson"];
        const telcoList = ["CSL", "3HK", "SmarTone", "CMHK", "Lucky SIM", "MORE", "鴨聊佳"];
        let simRecords = []; let selectedIndices = new Set(); let currentIdx = null;
 
-       // 初始化：建立選單選項
        window.onload = function() {
            const s1 = document.getElementById('selectStaff');
            const s2 = document.getElementById('batchStaff');
@@ -124,7 +117,6 @@
            opts.forEach(o => s2.add(o.cloneNode(true)));
            s2.value = "KEEP";
 
-           // 電訊商按鈕
            const btnGroup = document.getElementById('telcoBtnGroup');
            telcoList.forEach(t => {
                 let btn = document.createElement('button'); btn.className = 'btn'; btn.style.border="1px solid #e2e8f0"; btn.innerText = t; btn.style.fontSize="18px";
@@ -141,7 +133,6 @@
            loadData();
        };
 
-       // 日期格式化：確保顯示 YYYY/MM/DD
        function formatDate(str) {
            if (!str || str === "---") return "---";
            const d = new Date(str);
@@ -149,16 +140,13 @@
            return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
        }
 
-       // 核心渲染功能
        function render() {
            const tbody = document.getElementById('simTable'); 
            const kw = document.getElementById('searchInput').value.toLowerCase();
            let counts = { total: simRecords.length, stock: 0, used: 0, lost: 0 };
            
            tbody.innerHTML = simRecords.map((r, i) => {
-                // 搜尋過濾
                 if (!(r.id.toString().toLowerCase().includes(kw) || r.staff.toLowerCase().includes(kw) || r.location.toLowerCase().includes(kw))) return "";
-                
                 const isLost = r.usage === "遺失";
                 const isUsed = r.staff !== "---" && !isLost;
                 if (isLost) counts.lost++; else if (isUsed) counts.used++; else counts.stock++;
@@ -186,7 +174,7 @@
            document.getElementById('selectCount').innerText = selectedIndices.size;
        }
 
-       // 批量修改邏輯
+       // 批量修改
        function openBatchClaim() {
            document.getElementById('batchCountText').innerText = selectedIndices.size;
            document.getElementById('batchStaff').value = "KEEP"; 
@@ -212,34 +200,30 @@
                logAction(idx, "批量修改內容"); 
                updateTime(idx);
            });
-
            setDirty(true); closeModal('batchClaimModal'); selectedIndices.clear(); 
            document.getElementById('selectAll').checked = false; render();
        }
 
-          function confirmBatchClaim() {
-           let r_v = document.getElementById('batchRemains').value.trim();
-           if(r_v && !isNaN(r_v)) r_v += " GB";
-           const l_v = document.getElementById('batchLoc').value.trim();
-           const s_v = document.getElementById('batchStaff').value;
-           
+       // 新增：批量歸還邏輯
+       function batchReset() {
+           if (!selectedIndices.size) return;
+           if (!confirm(`確定要將選中的 ${selectedIndices.size} 張卡片批量歸還為「在庫」狀態嗎？`)) return;
+
            selectedIndices.forEach(idx => {
-               let changes = [];
-               if(r_v && simRecords[idx].remains !== r_v) { changes.push(`用量:${simRecords[idx].remains}→${r_v}`); simRecords[idx].remains = r_v; }
-               if(l_v && simRecords[idx].location !== l_v) { changes.push(`地點:${simRecords[idx].location}→${l_v}`); simRecords[idx].location = l_v; }
-               if(s_v !== "" && simRecords[idx].staff !== s_v) { changes.push(`人員:${simRecords[idx].staff}→${s_v}`); simRecords[idx].staff = s_v; simRecords[idx].usage = (s_v==="---"?"在庫":"已領用"); }
-               
-               if(changes.length > 0) {
-                   logAction(idx, "批量修改", changes.join(", "));
-                   updateTime(idx);
-               }
+               const r = simRecords[idx];
+               r.usage = "在庫";
+               r.staff = "---";
+               r.location = "---";
+               r.action = "批量歸還";
+               updateTime(idx);
            });
-           setDirty(true); closeModal('batchClaimModal'); render();
+
+           setDirty(true);
+           selectedIndices.clear();
+           document.getElementById('selectAll').checked = false;
+           render();
        }
 
-
-      
-       // 單個編輯邏輯
        function openEditModal(idx) {
            currentIdx = idx; const r = simRecords[idx];
            document.getElementById('modalTitle').innerText = "編輯卡號：" + r.id;
@@ -264,45 +248,40 @@
            updateTime(currentIdx); setDirty(true); render(); closeModal('editModal');
        }
 
-       // 網絡請求：讀取
        async function loadData() {
            toggleLoader(true);
            try {
                 const res = await fetch(GAS_URL + "?t=" + new Date().getTime());
                 simRecords = await res.json(); 
                 render();
-           } catch(e) { alert("讀取雲端失敗，請檢查網絡或 GAS 網址。"); }
+           } catch(e) { alert("讀取失敗"); }
            toggleLoader(false);
        }
 
-       // 網絡請求：上傳儲存
        async function uploadData() {
            toggleLoader(true);
            try {
                 await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(simRecords) });
                 setDirty(false); 
-                setTimeout(() => { alert("✅ 資料已成功儲存並同步到 Google Sheet"); loadData(); }, 1200);
-           } catch(e) { alert("同步失敗，請重試。"); }
+                setTimeout(() => { alert("✅ 已成功儲存"); loadData(); }, 1200);
+           } catch(e) { alert("同步失敗"); }
            toggleLoader(false);
        }
 
-       // 網絡請求：顯示操作紀錄 (Alert 版)
        async function showHistoryLog() {
            toggleLoader(true);
            try {
                 const res = await fetch(GAS_URL + "?type=getLogs&t=" + new Date().getTime());
                 const logs = await res.json();
-                if (logs.length === 0) {
-                    alert("目前暫無任何操作紀錄。");
-                } else {
+                if (logs.length === 0) { alert("暫無紀錄"); } 
+                else {
                     const msg = logs.slice(0, 10).map(l => `${l.time} | ID: ${l.id} | ${l.action}`).join("\n");
                     alert("最近 10 條操作紀錄：\n\n" + msg);
                 }
-           } catch(e) { alert("無法讀取紀錄，請確保 GAS 已正確部署。"); }
+           } catch(e) { alert("無法讀取紀錄"); }
            toggleLoader(false);
        }
 
-       // 輔助功能
        function logAction(idx, msg) { simRecords[idx].action = msg; }
        function updateTime(idx) { 
            simRecords[idx].date = new Date().toLocaleString('zh-HK', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }); 
@@ -314,9 +293,4 @@
        function toggleSelectAll() { 
            const chk = document.getElementById('selectAll').checked; 
            selectedIndices.clear(); 
-           if(chk) simRecords.forEach((_,i)=>selectedIndices.add(i)); 
-           render(); 
-       }
-   </script>
-</body>
-</html>
+           if(chk) simRecords.forEach((_,i)=>selectedIndices.add
