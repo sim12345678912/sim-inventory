@@ -3,9 +3,8 @@
 <head>
    <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>SIM 雲端管理系統 V10.0 (雲端紀錄版)</title>
+   <title>SIM 雲端管理系統 V3.2</title>
    <style>
-       /* 保持原有的 CSS 樣式不變 */
        body { font-family: system-ui, -apple-system, sans-serif; background-color: #f1f5f9; padding: 20px; color: #334155; margin: 0; }
        .container { max-width: 1350px; margin: 0 auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
        .dashboard { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -67,7 +66,7 @@
            </div>
        </div>
        <div class="tool-bar">
-           <input type="text" id="searchInput" class="search-box" placeholder="🔍 搜尋 ID、人員、地點或電訊商..." oninput="render()">
+           <input type="text" id="searchInput" class="search-box" placeholder="🔍 搜尋 ID、人員、地點..." oninput="render()">
            <div id="batchTools" class="batch-btn-group">
                 <button onclick="openBatchClaim()" class="btn" style="background:#2563eb;color:white;">🎁 批量修改 (<span id="selectCount">0</span>)</button>
                 <button onclick="batchReset()" class="btn" style="background:#fff1f2; color:#be123c; border:1px solid #fecaca;">🧹 批量歸還</button>
@@ -84,7 +83,6 @@
            </thead>
            <tbody id="simTable"></tbody>
        </table>
-
        <div class="admin-footer">
            <button onclick="openHistory()" class="btn btn-log">📊 原始表格</button>
            <button onclick="exportToExcel()" class="btn btn-excel">📥 匯出 Excel</button>
@@ -92,114 +90,48 @@
        </div>
    </div>
 
-   <div id="historyLogModal" class="modal">
-        <div class="modal-content" style="max-width: 850px; width: 95%;">
-            <h2>雲端操作紀錄 (全機同步)</h2>
-            <div class="history-table-container">
-                <table style="table-layout: auto;">
-                    <thead style="position: sticky; top: 0; z-index: 10;">
-                        <tr>
-                            <th style="width:160px;">操作時間</th>
-                            <th>動作詳細內容</th>
-                        </tr>
-                    </thead>
-                    <tbody id="historyLogTable"></tbody>
-                </table>
-            </div>
-            <button onclick="closeModal('historyLogModal')" class="btn" style="width:100%; margin-top:20px; background:#f1f5f9;">關閉</button>
-        </div>
-   </div>
-
-   <div id="batchClaimModal" class="modal"><div class="modal-content"><h2>批量領取 / 修改</h2><p>選中 <span id="batchCountText"></span> 張卡片</p><label>領取人員</label><select id="batchStaff"></select><label>使用地點</label><input type="text" id="batchLoc"><label>可用量</label><input type="text" id="batchRemains"><div style="display:flex;gap:10px;"><button onclick="closeModal('batchClaimModal')" class="btn">取消</button><button onclick="confirmBatchClaim()" class="btn" style="background:#2563eb;color:white;">確認變更</button></div></div></div>
+   <div id="historyLogModal" class="modal"><div class="modal-content" style="max-width: 850px; width: 95%;"><h2>雲端操作紀錄 (同步)</h2><div class="history-table-container"><table><thead><tr><th style="width:160px;">時間</th><th>動作</th></tr></thead><tbody id="historyLogTable"></tbody></table></div><button onclick="closeModal('historyLogModal')" class="btn" style="width:100%; margin-top:20px; background:#f1f5f9;">關閉</button></div></div>
+   <div id="batchClaimModal" class="modal"><div class="modal-content"><h2>批量領取 / 修改</h2><p>選中 <span id="batchCountText"></span> 張卡片</p><label>人員</label><select id="batchStaff"></select><label>地點</label><input type="text" id="batchLoc"><label>可用量</label><input type="text" id="batchRemains"><div style="display:flex;gap:10px;"><button onclick="closeModal('batchClaimModal')" class="btn">取消</button><button onclick="confirmBatchClaim()" class="btn" style="background:#2563eb;color:white;">確認變更</button></div></div></div>
    <div id="telcoModal" class="modal"><div class="modal-content"><h2>選擇電訊商</h2><div class="telco-grid" id="telcoBtnGroup"></div><button onclick="closeModal('telcoModal')" class="btn" style="width:100%;margin-top:20px;">關閉</button></div></div>
    <div id="editModal" class="modal"><div class="modal-content"><h2 id="modalTitle">編輯</h2><label>可用量 (GB)</label><input type="text" id="inputUsageVal"><label>地點</label><input type="text" id="inputLoc"><label>人員</label><select id="selectStaff"></select><div style="display:flex;gap:10px;"><button onclick="closeModal('editModal')" class="btn">取消</button><button onclick="confirmSave()" class="btn" style="background:#2563eb;color:white;">儲存</button></div></div></div>
 
    <script>
-       /** 【重要】請將下面的 URL 換成你剛剛「重新部署」後得到的那個 **/
-       const GAS_URL = "https://script.google.com/macros/s/AKfycbxrb5GO_DU8zUtiwUd3342TYhO6RFse3dCbWkUFdC_1_VpSHCInAHIcnvvdw17w2g2j/exec"; 
+       // 【重要】填入你的 GAS /exec 網址
+       const GAS_URL = "https://script.google.com/macros/s/AKfycbyOpx9JWXms5k-HIp1Q9IWR5JgRNRA6B2JQlcoqYLM6foQEkXxW6WE8FMf4MCI6kHph/exec"; 
 
        const userList = ["Leo", "Mason", "Mayce", "Sherman", "ting ting", "Jenna", "Roy", "Arron", "solar", "Willam", "hanson"];
        const telcoList = ["CSL", "3HK", "SmarTone", "CMHK", "Lucky SIM", "MORE", "鴨聊佳"];
-       
-       let simRecords = []; 
-       let selectedIndices = new Set(); 
-       let currentIdx = null; 
-       let isDirty = false;
-
-       function formatDate(str) {
-           if (!str || str === "---") return "---";
-           const d = new Date(str);
-           return isNaN(d) ? str : `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
-       }
+       let simRecords = []; let selectedIndices = new Set(); let currentIdx = null; let isDirty = false;
 
        window.onload = function() {
-           const s1 = document.getElementById('selectStaff'); 
-           const s2 = document.getElementById('batchStaff');
+           const s1 = document.getElementById('selectStaff'); const s2 = document.getElementById('batchStaff');
            const opts = [new Option("-- 未領取 --", "---"), ...userList.map(n => new Option(n, n))];
            opts.forEach(o => s1.add(o.cloneNode(true))); 
-           s2.add(new Option("-- 不變更人員 --", "")); 
-           opts.slice(1).forEach(o => s2.add(o.cloneNode(true)));
-           
+           s2.add(new Option("-- 不變更人員 --", "")); opts.slice(1).forEach(o => s2.add(o.cloneNode(true)));
            const btnGroup = document.getElementById('telcoBtnGroup');
            telcoList.forEach(t => {
                 let btn = document.createElement('div'); btn.className = 'telco-btn'; btn.innerText = t;
-                btn.onclick = () => { 
-                    const oldT = simRecords[currentIdx].telco;
-                    if(oldT !== t) {
-                        simRecords[currentIdx].telco = t; 
-                        logAction(currentIdx, `電訊商: ${oldT} → ${t}`); 
-                        updateTime(currentIdx); setDirty(true); render(); 
-                    }
-                    closeModal('telcoModal'); 
-                };
+                btn.onclick = () => { if(simRecords[currentIdx].telco !== t) { logAction(currentIdx, `電訊商: ${simRecords[currentIdx].telco} → ${t}`); simRecords[currentIdx].telco = t; updateTime(currentIdx); setDirty(true); render(); } closeModal('telcoModal'); };
                 btnGroup.appendChild(btn);
            });
            loadData();
        };
 
        function logAction(idx, msg, customDiff = "") {
-           const now = new Date();
-           const timeStr = now.toLocaleString('zh-HK', { 
-               year: 'numeric', month: '2-digit', day: '2-digit', 
-               hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false 
-           });
-           const recordId = simRecords[idx].id;
-           let fullMsg = `[卡號 ${recordId}] ${msg}`;
+           const now = new Date().toLocaleString('zh-HK', { hour12: false });
+           let fullMsg = `[卡號 ${simRecords[idx].id}] ${msg}`;
            if(customDiff) fullMsg += ` (${customDiff})`;
-           simRecords[idx].action = `[${timeStr}] ${fullMsg}`; 
+           simRecords[idx].action = `[${now}] ${fullMsg}`;
        }
 
-       // 【核心改動】不再讀取 LocalStorage，改為讀取 Google Sheets Logs 分頁
        async function showHistoryLog() {
-           const tbody = document.getElementById('historyLogTable');
-           tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:20px;">⌛ 正在讀取雲端歷史紀錄...</td></tr>';
+           const tbody = document.getElementById('historyLogTable'); tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:20px;">⌛ 正在讀取雲端紀錄...</td></tr>';
            document.getElementById('historyLogModal').style.display = 'flex';
-
            try {
                 const res = await fetch(GAS_URL + "?type=getLogs&t=" + new Date().getTime());
                 const logs = await res.json();
-                if (logs.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:20px; color:#94a3b8;">暫無紀錄</td></tr>';
-                } else {
-                    tbody.innerHTML = logs.map(log => `
-                        <tr>
-                            <td style="color:#64748b; font-family: monospace; font-size:12px; vertical-align:top;">${log.time}</td>
-                            <td style="white-space: normal; word-break: break-all; font-weight:500; color:#1e293b; line-height:1.4;">${log.action}</td>
-                        </tr>
-                    `).join('');
-                }
-           } catch(e) {
-                tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:20px; color:red;">❌ 讀取失敗</td></tr>';
-           }
-       }
-
-       function openHistory() { window.open("https://docs.google.com/spreadsheets/d/1QsQ19xSbsMXjcSa7hzItjOiQnwEoVtwpP3oPfcAp3MM/edit#gid=0"); }
-       function toggleLoader(s) { document.getElementById('loader').style.display = s ? 'flex' : 'none'; }
-       function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-       function setDirty(d) { isDirty = d; document.getElementById('syncBtn').classList.toggle('dirty', d); }
-       function updateTime(idx) { 
-           const now = new Date(); 
-           simRecords[idx].date = now.toLocaleString('zh-HK', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }); 
+                tbody.innerHTML = logs.length === 0 ? '<tr><td colspan="2">暫無紀錄</td></tr>' : logs.map(log => `<tr><td style="font-size:11px;">${log.time}</td><td style="font-size:12px; line-height:1.4;">${log.action}</td></tr>`).join('');
+           } catch(e) { tbody.innerHTML = '<tr><td colspan="2" style="color:red;">❌ 讀取失敗</td></tr>'; }
        }
 
        async function loadData() {
@@ -215,12 +147,7 @@
 
        async function uploadData() {
            toggleLoader(true);
-           try { 
-               await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(simRecords) }); 
-               setDirty(false); 
-               // 同步後稍等一下再提示，因為 no-cors 模式無法確認即時成功，通常是成功的
-               setTimeout(() => { alert("✅ 數據已發送到雲端"); loadData(); }, 1000);
-           } catch(e) { alert("同步失敗"); }
+           try { await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(simRecords) }); setDirty(false); setTimeout(() => { alert("✅ 已同步至雲端"); loadData(); }, 1000); } catch(e) { alert("同步失敗"); }
            toggleLoader(false);
        }
 
@@ -228,23 +155,16 @@
            const tbody = document.getElementById('simTable'); const kw = document.getElementById('searchInput').value.toLowerCase();
            let counts = { total: simRecords.length, stock: 0, used: 0 };
            tbody.innerHTML = simRecords.map((r, i) => {
-                if (!(r.id.toLowerCase().includes(kw) || r.staff.toLowerCase().includes(kw) || r.telco.toLowerCase().includes(kw) || r.location.toLowerCase().includes(kw))) return "";
+                if (!(r.id.toLowerCase().includes(kw) || r.staff.toLowerCase().includes(kw) || r.location.toLowerCase().includes(kw))) return "";
                 const isUsed = r.staff !== "---"; isUsed ? counts.used++ : counts.stock++;
                 const isChecked = selectedIndices.has(i);
-                const isExp = (d) => {
-                    if (!d || d === "---") return false;
-                    const diff = Math.ceil((new Date(d) - new Date().setHours(0,0,0,0)) / (1000*60*60*24));
-                    return diff >= 0 && diff <= 7;
-                };
                 return `<tr class="${isChecked ? 'selected' : ''}">
                     <td class="checkbox-cell"><input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleRow(${i})"></td>
                     <td style="font-weight:bold; color:#94a3b8;">${r.id}</td>
                     <td><span class="badge ${isUsed ? 'badge-used' : 'badge-stock'}">${isUsed ? '已領用' : '在庫'}</span></td>
                     <td><b>${r.telco}</b><div class="quick-edit-btn" onclick="currentIdx=${i}; document.getElementById('telcoModal').style.display='flex';">✏️</div></td>
-                    <td>${r.remains}</td>
-                    <td class="${isExp(r.expiry) ? 'expiring-soon' : ''}">${r.expiry}<div class="quick-edit-btn" onclick="quickEditExpiry(${i})">✏️</div></td>
-                    <td>${r.location}</td>
-                    <td style="color:#2563eb; font-weight:900;">${r.staff}</td>
+                    <td>${r.remains}</td><td>${r.expiry}<div class="quick-edit-btn" onclick="quickEditExpiry(${i})">✏️</div></td>
+                    <td>${r.location}</td><td style="color:#2563eb; font-weight:900;">${r.staff}</td>
                     <td style="font-size:10px; color:#cbd5e1; text-align:center;">${r.date}</td>
                     <td style="text-align:center;"><button onclick="openEditModal(${i})" class="btn-edit">改</button><button onclick="resetSingle(${i})" class="btn-reset-single">✕</button></td>
                 </tr>`;
@@ -256,9 +176,11 @@
            document.getElementById('statUsed').innerText = counts.used;
        }
 
-       function toggleRow(i) { selectedIndices.has(i) ? selectedIndices.delete(i) : selectedIndices.add(i); render(); }
-       function toggleSelectAll() { const chk = document.getElementById('selectAll').checked; selectedIndices.clear(); if(chk) simRecords.forEach((_,i)=>selectedIndices.add(i)); render(); }
-       
+       function openBatchClaim() { 
+           document.getElementById('batchCountText').innerText = selectedIndices.size; 
+           document.getElementById('batchClaimModal').style.display = 'flex'; 
+       }
+
        function confirmBatchClaim() {
            let r_v = document.getElementById('batchRemains').value.trim();
            if(r_v && !isNaN(r_v)) r_v += " GB";
@@ -271,93 +193,24 @@
                if(s_v !== "" && simRecords[idx].staff !== s_v) { changes.push(`人員:${simRecords[idx].staff}→${s_v}`); simRecords[idx].staff = s_v; simRecords[idx].usage = (s_v==="---"?"在庫":"已領用"); }
                if(changes.length > 0) { logAction(idx, "批量修改", changes.join(", ")); updateTime(idx); }
            });
-           setDirty(true); closeModal('batchClaimModal'); render();
+           setDirty(true); closeModal('batchClaimModal'); selectedIndices.clear(); render();
        }
 
-       function batchReset() {
-           if(confirm("確定歸還選中的卡片？")) {
-               selectedIndices.forEach(idx => { 
-                   if(simRecords[idx].staff !== "---") {
-                       logAction(idx, "批量歸還", `原人員:${simRecords[idx].staff}`);
-                       simRecords[idx].staff = "---"; simRecords[idx].location = "---"; simRecords[idx].usage = "在庫"; 
-                       updateTime(idx); 
-                   }
-               });
-               selectedIndices.clear(); setDirty(true); render();
-           }
-       }
-
-       function resetSingle(idx) {
-           if(confirm("確定歸還此卡片？")) { 
-               logAction(idx, "手動歸還", `原人員:${simRecords[idx].staff}`);
-               simRecords[idx].staff = "---"; simRecords[idx].location = "---"; simRecords[idx].usage = "在庫"; 
-               updateTime(idx); setDirty(true); render(); 
-           }
-       }
-
-       function resetAllRecords() {
-           if(confirm("⚠️ 警告：這將清空全表所有領取人員！")) { 
-               simRecords.forEach((_,i)=>{ 
-                   if(simRecords[i].staff !== "---") {
-                       logAction(i, "全表重置歸還", `原人員:${simRecords[i].staff}`);
-                       simRecords[i].staff="---"; simRecords[i].location="---"; simRecords[i].usage="在庫"; 
-                       updateTime(i); 
-                   }
-               }); 
-               setDirty(true); render(); 
-           }
-       }
-
-       function openEditModal(idx) {
-           currentIdx = idx; const r = simRecords[idx];
-           document.getElementById('modalTitle').innerText = "編輯 " + r.id;
-           document.getElementById('inputUsageVal').value = r.remains.replace(" GB","") === "---" ? "" : r.remains.replace(" GB","");
-           document.getElementById('inputLoc').value = r.location === "---" ? "" : r.location;
-           document.getElementById('selectStaff').value = r.staff;
-           document.getElementById('editModal').style.display = 'flex';
-       }
-
-       function confirmSave() {
-           const r = simRecords[currentIdx];
-           let newV = document.getElementById('inputUsageVal').value.trim();
-           if(newV && !isNaN(newV)) newV += " GB";
-           if(!newV) newV = "---";
-           const newL = document.getElementById('inputLoc').value.trim() || "---";
-           const newS = document.getElementById('selectStaff').value;
-           let changes = [];
-           if(r.remains !== newV) changes.push(`用量:${r.remains}→${newV}`);
-           if(r.location !== newL) changes.push(`地點:${r.location}→${newL}`);
-           if(r.staff !== newS) changes.push(`人員:${r.staff}→${newS}`);
-           if(changes.length > 0) {
-               r.remains = newV; r.location = newL; r.staff = newS;
-               r.usage = (r.staff === "---") ? "在庫" : "已領用";
-               logAction(currentIdx, "手動編輯", changes.join(", "));
-               updateTime(currentIdx); setDirty(true); render();
-           }
-           closeModal('editModal');
-       }
-
-       function quickEditExpiry(idx) {
-           const oldE = simRecords[idx].expiry;
-           const v = prompt("到期日 (YYYY/MM/DD):", oldE === "---" ? "" : oldE);
-           if (v !== null) { 
-               const newE = formatDate(v.trim()) || "---";
-               if(oldE !== newE) {
-                   simRecords[idx].expiry = newE; 
-                   logAction(idx, "修改到期日", `${oldE} → ${newE}`); 
-                   updateTime(idx); setDirty(true); render(); 
-               }
-           }
-       }
-
+       function toggleRow(i) { selectedIndices.has(i) ? selectedIndices.delete(i) : selectedIndices.add(i); render(); }
+       function toggleSelectAll() { const chk = document.getElementById('selectAll').checked; selectedIndices.clear(); if(chk) simRecords.forEach((_,i)=>selectedIndices.add(i)); render(); }
+       function batchReset() { if(confirm("確定歸還選中的卡片？")) { selectedIndices.forEach(idx => { if(simRecords[idx].staff !== "---") { logAction(idx, "批量歸還", `原:${simRecords[idx].staff}`); simRecords[idx].staff = "---"; simRecords[idx].location = "---"; simRecords[idx].usage = "在庫"; updateTime(idx); } }); selectedIndices.clear(); setDirty(true); render(); } }
+       function resetSingle(idx) { if(confirm("確定歸還此卡片？")) { logAction(idx, "手動歸還", `原:${simRecords[idx].staff}`); simRecords[idx].staff = "---"; simRecords[idx].location = "---"; simRecords[idx].usage = "在庫"; updateTime(idx); setDirty(true); render(); } }
+       function openEditModal(idx) { currentIdx = idx; const r = simRecords[idx]; document.getElementById('modalTitle').innerText = "編輯 " + r.id; document.getElementById('inputUsageVal').value = r.remains.replace(" GB","")==="---"?"":r.remains.replace(" GB",""); document.getElementById('inputLoc').value = r.location==="---"?"":r.location; document.getElementById('selectStaff').value = r.staff; document.getElementById('editModal').style.display='flex'; }
+       function confirmSave() { const r = simRecords[currentIdx]; let newV = document.getElementById('inputUsageVal').value.trim(); if(newV && !isNaN(newV)) newV += " GB"; if(!newV) newV = "---"; const newL = document.getElementById('inputLoc').value.trim() || "---"; const newS = document.getElementById('selectStaff').value; let changes = []; if(r.remains !== newV) changes.push(`用量:${r.remains}→${newV}`); if(r.location !== newL) changes.push(`地點:${r.location}→${newL}`); if(r.staff !== newS) changes.push(`人員:${r.staff}→${newS}`); if(changes.length > 0) { r.remains = newV; r.location = newL; r.staff = newS; r.usage = (r.staff === "---") ? "在庫" : "已領用"; logAction(currentIdx, "手動編輯", changes.join(", ")); updateTime(currentIdx); setDirty(true); render(); } closeModal('editModal'); }
+       function quickEditExpiry(idx) { const oldE = simRecords[idx].expiry; const v = prompt("到期日 (YYYY/MM/DD):", oldE==="---"?"":oldE); if (v !== null) { const newE = formatDate(v.trim()) || "---"; if(oldE !== newE) { simRecords[idx].expiry = newE; logAction(idx, "修改到期日", `${oldE}→${newE}`); updateTime(idx); setDirty(true); render(); } } }
+       function formatDate(str) { if (!str || str === "---") return "---"; const d = new Date(str); return isNaN(d) ? str : `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`; }
+       function setDirty(d) { isDirty = d; document.getElementById('syncBtn').classList.toggle('dirty', d); }
+       function updateTime(idx) { simRecords[idx].date = new Date().toLocaleString('zh-HK', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }); }
+       function toggleLoader(s) { document.getElementById('loader').style.display = s ? 'flex' : 'none'; }
+       function closeModal(id) { document.getElementById(id).style.display = 'none'; }
        function openHistory() { window.open("https://docs.google.com/spreadsheets/d/1QsQ19xSbsMXjcSa7hzItjOiQnwEoVtwpP3oPfcAp3MM/edit#gid=0"); }
-       function exportToExcel() {
-           let csv = "\uFEFF編號,狀態,電訊商,可用量,到期日,地點,人員,更新時間\n";
-           simRecords.forEach(r => csv += `${r.id},${r.usage},${r.telco},${r.remains},${r.expiry},${r.location},${r.staff},${r.date}\n`);
-           const link = document.createElement("a");
-           link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-           link.download = `SIM_Inventory.csv`; link.click();
-       }
+       function resetAllRecords() { if(confirm("⚠️ 重設全表？")) { simRecords.forEach((_,i)=>{ if(simRecords[i].staff!=="---"){ logAction(i,"全重置",`原:${simRecords[i].staff}`); simRecords[i].staff="---"; simRecords[i].location="---"; simRecords[i].usage="在庫"; updateTime(i); } }); setDirty(true); render(); } }
+       function exportToExcel() { let csv = "\uFEFF編號,狀態,電訊商,用量,到期日,地點,人員,時間\n"; simRecords.forEach(r => csv += `${r.id},${r.usage},${r.telco},${r.remains},${r.expiry},${r.location},${r.staff},${r.date}\n`); const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); link.download = `SIM_Inventory.csv`; link.click(); }
    </script>
 </body>
 </html>
