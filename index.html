@@ -3,8 +3,9 @@
 <head>
    <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>SIM 雲端管理系統 V10.1</title>
+   <title>SIM 雲端管理系統 V10.0 (雲端紀錄版)</title>
    <style>
+       /* 保持原有的 CSS 樣式不變 */
        body { font-family: system-ui, -apple-system, sans-serif; background-color: #f1f5f9; padding: 20px; color: #334155; margin: 0; }
        .container { max-width: 1350px; margin: 0 auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
        .dashboard { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -50,7 +51,7 @@
    </style>
 </head>
 <body>
-   <div id="loader">⚙️ 正在讀取雲端數據...</div>
+   <div id="loader">⚙️ 正在處理雲端數據...</div>
    <div class="container">
        <div class="dashboard">
            <div class="stat-card"><div class="label">總卡片</div><div id="statTotal" class="value">0</div></div>
@@ -93,9 +94,7 @@
 
    <div id="historyLogModal" class="modal">
         <div class="modal-content" style="max-width: 850px; width: 95%;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h2>系統操作紀錄 (最近 1000 則)</h2>
-                </div>
+            <h2>雲端操作紀錄 (全機同步)</h2>
             <div class="history-table-container">
                 <table style="table-layout: auto;">
                     <thead style="position: sticky; top: 0; z-index: 10;">
@@ -116,8 +115,9 @@
    <div id="editModal" class="modal"><div class="modal-content"><h2 id="modalTitle">編輯</h2><label>可用量 (GB)</label><input type="text" id="inputUsageVal"><label>地點</label><input type="text" id="inputLoc"><label>人員</label><select id="selectStaff"></select><div style="display:flex;gap:10px;"><button onclick="closeModal('editModal')" class="btn">取消</button><button onclick="confirmSave()" class="btn" style="background:#2563eb;color:white;">儲存</button></div></div></div>
 
    <script>
-       // 請記得在下面貼上你最新的 Google Apps Script URL (以 /exec 結尾的那條)
-       const GAS_URL = "https://script.google.com/macros/s/AKfycbzRIrpfG79dEa1wtCokhLoZKir7tT7zHQawJW7-kon2oKug32Zhhp0nP_MOdm6fF3oX/exec";
+       /** 【重要】請將下面的 URL 換成你剛剛「重新部署」後得到的那個 **/
+       const GAS_URL = "https://script.google.com/macros/s/AKfycbxrb5GO_DU8zUtiwUd3342TYhO6RFse3dCbWkUFdC_1_VpSHCInAHIcnvvdw17w2g2j/exec"; 
+
        const userList = ["Leo", "Mason", "Mayce", "Sherman", "ting ting", "Jenna", "Roy", "Arron", "solar", "Willam", "hanson"];
        const telcoList = ["CSL", "3HK", "SmarTone", "CMHK", "Lucky SIM", "MORE", "鴨聊佳"];
        
@@ -125,13 +125,11 @@
        let selectedIndices = new Set(); 
        let currentIdx = null; 
        let isDirty = false;
-       let historyLogs = JSON.parse(localStorage.getItem('sim_history_logs')) || [];
 
        function formatDate(str) {
            if (!str || str === "---") return "---";
            const d = new Date(str);
-           if (isNaN(d)) return str;
-           return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+           return isNaN(d) ? str : `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
        }
 
        window.onload = function() {
@@ -168,28 +166,31 @@
            const recordId = simRecords[idx].id;
            let fullMsg = `[卡號 ${recordId}] ${msg}`;
            if(customDiff) fullMsg += ` (${customDiff})`;
-           simRecords[idx].action = `[${timeStr}] ${msg}`;
-           const logEntry = { time: timeStr, action: fullMsg };
-           historyLogs.unshift(logEntry);
-           
-           // 上限 1000 則
-           if (historyLogs.length > 1000) historyLogs.pop();
-           localStorage.setItem('sim_history_logs', JSON.stringify(historyLogs));
+           simRecords[idx].action = `[${timeStr}] ${fullMsg}`; 
        }
 
-       function showHistoryLog() {
+       // 【核心改動】不再讀取 LocalStorage，改為讀取 Google Sheets Logs 分頁
+       async function showHistoryLog() {
            const tbody = document.getElementById('historyLogTable');
-           if (historyLogs.length === 0) {
-               tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:20px; color:#94a3b8;">暫無操作紀錄</td></tr>';
-           } else {
-               tbody.innerHTML = historyLogs.map(log => `
-                   <tr>
-                       <td style="color:#64748b; font-family: monospace; font-size:12px; vertical-align:top;">${log.time}</td>
-                       <td style="white-space: normal; word-break: break-all; font-weight:500; color:#1e293b; line-height:1.4;">${log.action}</td>
-                   </tr>
-               `).join('');
-           }
+           tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:20px;">⌛ 正在讀取雲端歷史紀錄...</td></tr>';
            document.getElementById('historyLogModal').style.display = 'flex';
+
+           try {
+                const res = await fetch(GAS_URL + "?type=getLogs&t=" + new Date().getTime());
+                const logs = await res.json();
+                if (logs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:20px; color:#94a3b8;">暫無紀錄</td></tr>';
+                } else {
+                    tbody.innerHTML = logs.map(log => `
+                        <tr>
+                            <td style="color:#64748b; font-family: monospace; font-size:12px; vertical-align:top;">${log.time}</td>
+                            <td style="white-space: normal; word-break: break-all; font-weight:500; color:#1e293b; line-height:1.4;">${log.action}</td>
+                        </tr>
+                    `).join('');
+                }
+           } catch(e) {
+                tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:20px; color:red;">❌ 讀取失敗</td></tr>';
+           }
        }
 
        function openHistory() { window.open("https://docs.google.com/spreadsheets/d/1QsQ19xSbsMXjcSa7hzItjOiQnwEoVtwpP3oPfcAp3MM/edit#gid=0"); }
@@ -207,15 +208,18 @@
                 const res = await fetch(GAS_URL + "?t=" + new Date().getTime());
                 const data = await res.json();
                 simRecords = data.map(r => ({ ...r, expiry: formatDate(r.expiry), action: r.action || "---" }));
-           } catch(e) { alert("讀取失敗，請檢查 GAS 網址是否正確。"); }
-           render(); toggleLoader(false);
+                render();
+           } catch(e) { alert("讀取失敗"); }
+           toggleLoader(false);
        }
 
        async function uploadData() {
            toggleLoader(true);
            try { 
                await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(simRecords) }); 
-               setDirty(false); alert("✅ 數據同步成功"); 
+               setDirty(false); 
+               // 同步後稍等一下再提示，因為 no-cors 模式無法確認即時成功，通常是成功的
+               setTimeout(() => { alert("✅ 數據已發送到雲端"); loadData(); }, 1000);
            } catch(e) { alert("同步失敗"); }
            toggleLoader(false);
        }
@@ -346,7 +350,7 @@
            }
        }
 
-       function openBatchClaim() { document.getElementById('batchCountText').innerText = selectedIndices.size; document.getElementById('batchClaimModal').style.display = 'flex'; }
+       function openHistory() { window.open("https://docs.google.com/spreadsheets/d/1QsQ19xSbsMXjcSa7hzItjOiQnwEoVtwpP3oPfcAp3MM/edit#gid=0"); }
        function exportToExcel() {
            let csv = "\uFEFF編號,狀態,電訊商,可用量,到期日,地點,人員,更新時間\n";
            simRecords.forEach(r => csv += `${r.id},${r.usage},${r.telco},${r.remains},${r.expiry},${r.location},${r.staff},${r.date}\n`);
