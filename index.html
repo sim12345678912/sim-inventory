@@ -79,6 +79,7 @@
            <input type="text" id="searchInput" class="search-box" placeholder="🔍 搜尋 ID、人員、地點..." oninput="render()">
            <div id="batchTools" style="display:none; gap:10px;">
                 <button onclick="openBatchClaim()" class="btn" style="background:#2563eb;color:white; font-size: 16px;">🎁 批量修改 (<span id="selectCount">0</span>)</button>
+               <button onclick="batchReset()" class="btn" style="background:#fff1f2; color:#be123c; border:1px solid #fecaca;">🧹 批量歸還</button>
            </div>
        </div>
 
@@ -216,6 +217,28 @@
            document.getElementById('selectAll').checked = false; render();
        }
 
+          function confirmBatchClaim() {
+           let r_v = document.getElementById('batchRemains').value.trim();
+           if(r_v && !isNaN(r_v)) r_v += " GB";
+           const l_v = document.getElementById('batchLoc').value.trim();
+           const s_v = document.getElementById('batchStaff').value;
+           
+           selectedIndices.forEach(idx => {
+               let changes = [];
+               if(r_v && simRecords[idx].remains !== r_v) { changes.push(`用量:${simRecords[idx].remains}→${r_v}`); simRecords[idx].remains = r_v; }
+               if(l_v && simRecords[idx].location !== l_v) { changes.push(`地點:${simRecords[idx].location}→${l_v}`); simRecords[idx].location = l_v; }
+               if(s_v !== "" && simRecords[idx].staff !== s_v) { changes.push(`人員:${simRecords[idx].staff}→${s_v}`); simRecords[idx].staff = s_v; simRecords[idx].usage = (s_v==="---"?"在庫":"已領用"); }
+               
+               if(changes.length > 0) {
+                   logAction(idx, "批量修改", changes.join(", "));
+                   updateTime(idx);
+               }
+           });
+           setDirty(true); closeModal('batchClaimModal'); render();
+       }
+
+
+      
        // 單個編輯邏輯
        function openEditModal(idx) {
            currentIdx = idx; const r = simRecords[idx];
