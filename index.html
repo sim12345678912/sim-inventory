@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIM 雲端管理系統 - 功能全開版</title>
+    <title>SIM 雲端管理系統 - 安全優化版</title>
     <style>
         body { font-family: system-ui, -apple-system, sans-serif; background-color: #f1f5f9; padding: 20px; color: #334155; margin: 0; }
         .container { max-width: 1350px; margin: 0 auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
@@ -16,16 +16,23 @@
         h1 span { color: #3b82f6; }
         .tool-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; background: #f8fafc; padding: 12px 15px; border-radius: 15px; flex-wrap: wrap; }
         .search-box { flex: 1; min-width: 250px; padding: 10px 15px; border: 2px solid #e2e8f0; border-radius: 10px; outline: none; }
+        
         .btn { padding: 10px 18px; border-radius: 10px; cursor: pointer; font-weight: bold; border: none; transition: 0.3s; font-size: 13px; display: inline-flex; align-items: center; gap: 5px; }
         .btn-refresh { background: #fff; border: 1px solid #e2e8f0; color: #475569; }
         .btn-sync { background: #f59e0b; color: white; }
         .btn-sync.dirty { background: #10b981 !important; box-shadow: 0 0 15px rgba(16, 185, 129, 0.6); animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
         .btn-excel { background: #059669; color: white; }
-        .btn-reset-all { background: #1e293b; color: white; }
+        
+        /* 底部危險區樣式 */
+        .admin-footer { margin-top: 40px; padding-top: 20px; border-top: 1px dashed #e2e8f0; display: flex; justify-content: center; align-items: center; flex-direction: column; gap: 10px; }
+        .btn-reset-all { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; padding: 8px 15px; font-size: 12px; }
+        .btn-reset-all:hover { background: #fecaca; }
+
         .batch-btn-group { display: none; gap: 10px; } 
         .btn-batch-edit { background: #3b82f6; color: white; }
         .btn-batch-reset { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+        
         table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
         th { background: #1e293b; color: #94a3b8; padding: 15px 10px; text-align: left; font-size: 11px; }
         td { padding: 12px 10px; border-bottom: 1px solid #f1f5f9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -38,6 +45,7 @@
         .quick-edit-btn { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; margin-left: 5px; background: #f1f5f9; border-radius: 5px; cursor: pointer; color: #94a3b8; border: 1px solid #e2e8f0; font-size: 10px; }
         .btn-edit { background: #334155; color: white; padding: 6px 12px; border-radius: 8px; cursor:pointer; font-weight: bold; border:none; }
         .btn-reset-single { color: #cbd5e1; font-size: 18px; border:none; background:none; cursor:pointer; padding: 0 5px; }
+        
         #loader { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.8); backdrop-filter: blur(5px); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; }
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 9000; backdrop-filter: blur(4px); }
         .modal-content { background: white; padding: 30px; border-radius: 20px; width: 90%; max-width: 450px; box-shadow: 0 25px 50px rgba(0,0,0,0.2); }
@@ -63,7 +71,6 @@
                 <button onclick="loadData()" class="btn btn-refresh">🔄 刷新</button>
                 <button onclick="exportToExcel()" class="btn btn-excel">📥 匯出 Excel</button>
                 <button onclick="uploadData()" id="syncBtn" class="btn btn-sync">💾 儲存並同步</button>
-                <button onclick="resetAllRecords()" class="btn btn-reset-all">⚠️ 重設紀錄</button>
             </div>
         </div>
 
@@ -92,6 +99,11 @@
             </thead>
             <tbody id="simTable"></tbody>
         </table>
+
+        <div class="admin-footer">
+            <span style="font-size: 11px; color: #94a3b8;">--- 系統管理區 ---</span>
+            <button onclick="resetAllRecords()" class="btn btn-reset-all">⚠️ 重設全表紀錄</button>
+        </div>
     </div>
 
     <div id="telcoModal" class="modal">
@@ -235,9 +247,9 @@
         function setDirty(d) { isDirty = d; document.getElementById('syncBtn').classList.toggle('dirty', d); }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
         function toggleLoader(s) { document.getElementById('loader').style.display = s ? 'flex' : 'none'; }
-        function resetSingle(idx) { if(confirm("清除紀錄？")) { Object.assign(simRecords[idx], {remains:"---", location:"---", staff:"---", date:"---"}); setDirty(true); render(); } }
-        function resetAllRecords() { if(confirm("重設全部？")) { simRecords.forEach(r => Object.assign(r, {remains:"---", location:"---", staff:"---", date:"---"})); setDirty(true); render(); } }
-        function batchReset() { if(confirm("批量清除？")) { selectedIndices.forEach(idx => Object.assign(simRecords[idx], {remains:"---", location:"---", staff:"---", date:"---"})); selectedIndices.clear(); setDirty(true); render(); } }
+        function resetSingle(idx) { if(confirm("確定清除此卡片的領取紀錄？")) { Object.assign(simRecords[idx], {remains:"---", location:"---", staff:"---", date:"---"}); setDirty(true); render(); } }
+        function resetAllRecords() { if(confirm("⚠️ 警告：這將會清除「全表」所有卡片的領用紀錄！\n此操作不可逆，確定要執行嗎？")) { simRecords.forEach(r => Object.assign(r, {remains:"---", location:"---", staff:"---", date:"---"})); setDirty(true); render(); } }
+        function batchReset() { if(confirm("確定清除選中項目的領取紀錄？")) { selectedIndices.forEach(idx => Object.assign(simRecords[idx], {remains:"---", location:"---", staff:"---", date:"---"})); selectedIndices.clear(); setDirty(true); render(); } }
         function exportToExcel() {
             let csv = "\uFEFF編號,狀態,電訊商,可用量,到期日,地點,人員,更新時間\n";
             simRecords.forEach(r => csv += `${r.id},${r.staff==='---'?'在庫':'已領用'},${r.telco},${r.remains},${r.expiry},${r.location},${r.staff},${r.date}\n`);
