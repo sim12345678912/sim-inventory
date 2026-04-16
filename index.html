@@ -154,36 +154,26 @@
             document.getElementById('selCount').innerText = selectedIndices.size;
         }
 
-        function confirmBatch() {
-            const staff = document.getElementById('batchStaff').value;
-            const loc = document.getElementById('batchLoc').value || "---";
-            let rem = document.getElementById('batchRemains').value;
-            if (rem && !isNaN(rem)) rem += " GB";
+       function confirmBatch() {
+    console.log("按鈕已觸發"); // 檢查用
+    
+    // 獲取彈窗資料
+    const staff = document.getElementById('batchStaff').value;
+    const loc = document.getElementById('batchLoc').value || "---";
+    
+    // 最簡單的更新邏輯
+    selectedIndices.forEach(idx => {
+        simRecords[idx].staff = staff;
+        simRecords[idx].location = loc;
+        simRecords[idx].date = new Date().toLocaleString('zh-HK');
+        simRecords[idx].action = "領取: " + staff;
+    });
 
-            selectedIndices.forEach(idx => {
-                const r = simRecords[idx];
-                const oldStaff = r.staff || "---";
-                
-                // 產生 Action 操作內容
-                r.action = (oldStaff === "---") ? `由 ${staff} 領取 (地點: ${loc})` : `由 ${oldStaff} 轉交給 ${staff} (地點: ${loc})`;
-                
-                r.staff = staff;
-                r.location = loc;
-                if (rem) r.remains = rem;
-                
-                const now = new Date();
-                r.date = (now.getMonth() + 1).toString().padStart(2, '0') + "/" + 
-                         now.getDate().toString().padStart(2, '0') + " " + 
-                         now.getHours().toString().padStart(2, '0') + ":" + 
-                         now.getMinutes().toString().padStart(2, '0');
-            });
-
-            selectedIndices.clear();
-            render();
-            closeModal();
-            alert("✅ 領取成功！請記得撳「儲存並同步」。");
-        }
-
+    selectedIndices.clear();
+    render();
+    closeModal();
+    alert("本地更新成功！");
+}
         // 其他功能函數
         function toggleRow(i) { selectedIndices.has(i) ? selectedIndices.delete(i) : selectedIndices.add(i); render(); }
         function toggleAll(el) { selectedIndices.clear(); if (el.checked) simRecords.forEach((_, i) => selectedIndices.add(i)); render(); }
