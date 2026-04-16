@@ -234,30 +234,54 @@
         }
  
     function confirmBatch() {
+    // 1. 攞返彈窗入面嘅輸入數值
     const staff = document.getElementById('batchStaff').value;
     const loc = document.getElementById('batchLoc').value || "---";
     let rem = document.getElementById('batchRemains').value;
-    if (rem && !isNaN(rem)) rem += " GB";
+    
+    // 處理可用量單位
+    if (rem && !isNaN(rem)) {
+        rem += " GB";
+    }
 
+    // 2. 遍歷所有選中嘅卡片進行修改
     selectedIndices.forEach(idx => {
-        // --- 新增：產生動作描述 ---
-        const oldStaff = simRecords[idx].staff;
-        const actionDesc = (oldStaff === "---") 
-            ? `由 ${staff} 領取 (地點: ${loc})` 
-            : `由 ${oldStaff} 轉交給 ${staff}`;
+        const record = simRecords[idx];
+        const oldStaff = record.staff;
         
-        // --- 更新資料 ---
-        simRecords[idx].staff = staff;
-        simRecords[idx].location = loc;
-        if (rem) simRecords[idx].remains = rem;
-        simRecords[idx].date = new Date().toLocaleString('zh-HK');
-        simRecords[idx].action = actionDesc; // 將描述存入 action 屬性
+        // 自動產生操作內容描述
+        let actionDesc = "";
+        if (oldStaff === "---" || oldStaff === "") {
+            actionDesc = "由 " + staff + " 領取 (地點: " + loc + ")";
+        } else {
+            actionDesc = "由 " + oldStaff + " 轉交給 " + staff + " (地點: " + loc + ")";
+        }
+
+        // 更新本地數據資料
+        record.staff = staff;
+        record.location = loc;
+        if (rem) {
+            record.remains = rem;
+        }
+        
+        // 設定更新時間 (格式: 04/16 12:40)
+        const now = new Date();
+        record.date = (now.getMonth() + 1).toString().padStart(2, '0') + "/" + 
+                      now.getDate().toString().padStart(2, '0') + " " + 
+                      now.getHours().toString().padStart(2, '0') + ":" + 
+                      now.getMinutes().toString().padStart(2, '0');
+        
+        // 儲存操作內容
+        record.action = actionDesc;
     });
 
+    // 3. 清空選取狀態並重新渲染表格
     selectedIndices.clear();
     render();
     closeModal();
-    alert("本地紀錄已更新，請按『儲存並同步』寫入試算表。");
+    
+    // 提示用戶
+    alert("✅ 領取成功！紀錄已更新。\n⚠️ 請記得撳「儲存並同步」先會寫入試算表。");
 }
  
         function batchReset() {
