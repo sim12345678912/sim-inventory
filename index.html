@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SIM管理系統 </title>
+  <title>SIM管理系統</title>
   <style>
     body {
       font-family: system-ui, -apple-system, sans-serif;
@@ -514,9 +514,17 @@
 
     function formatDate(str) {
       if (!str || str === "---") return "---";
-      const d = new Date(str.replace(/-/g, "/"));
-      if (isNaN(d)) return str;
-      return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+
+      const s = String(str).trim();
+
+      if (s.includes("T")) {
+        return s.split("T")[0];
+      }
+
+      const d = new Date(s.replace(/-/g, "/"));
+      if (isNaN(d)) return s;
+
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
 
     function normalizeUsage(record) {
@@ -576,10 +584,13 @@
     function isExpiringSoon(d) {
       if (!d || d === "---") return false;
 
+      const s = formatDate(d);
+      if (s === "---") return false;
+
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const expDate = new Date(String(d).replace(/-/g, "/"));
+      const expDate = new Date(s.replace(/-/g, "/"));
       if (isNaN(expDate)) return false;
 
       const diff = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
@@ -589,10 +600,13 @@
     function isExpired(d) {
       if (!d || d === "---") return false;
 
+      const s = formatDate(d);
+      if (s === "---") return false;
+
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const expDate = new Date(String(d).replace(/-/g, "/"));
+      const expDate = new Date(s.replace(/-/g, "/"));
       if (isNaN(expDate)) return false;
 
       expDate.setHours(0, 0, 0, 0);
@@ -738,7 +752,7 @@
             <td><span class="badge ${getBadgeClass(status)}">${status}</span></td>
             <td><b>${r.telco}</b><div class="quick-edit-btn" onclick="currentIdx=${i}; document.getElementById('telcoModal').style.display='flex';">✏️</div></td>
             <td>${r.remains}</td>
-            <td class="${expiryClass}">${r.expiry}<div class="quick-edit-btn" onclick="quickEditExpiry(${i})">✏️</div></td>
+            <td class="${expiryClass}">${formatDate(r.expiry)}<div class="quick-edit-btn" onclick="quickEditExpiry(${i})">✏️</div></td>
             <td>${r.location}</td>
             <td style="color:#2563eb; font-weight:900;">${r.staff}</td>
             <td style="font-size:13px; color:#94a3b8; text-align:center;">${r.date}</td>
@@ -986,7 +1000,7 @@
 
     function quickEditExpiry(idx) {
       const oldE = simRecords[idx].expiry;
-      const v = prompt("到期日 (YYYY/MM/DD):", oldE === "---" ? "" : oldE);
+      const v = prompt("到期日 (YYYY-MM-DD):", oldE === "---" ? "" : oldE);
       if (v !== null) {
         const newE = formatDate(v.trim()) || "---";
         if (oldE !== newE) {
@@ -1022,7 +1036,7 @@
       let csv = "\uFEFF編號,狀態,電訊商,可用量,到期日,地點,人員,更新時間\n";
       simRecords.forEach(r => {
         const status = getAutoStatus(r);
-        csv += `${r.id},${status},${r.telco},${r.remains},${r.expiry},${r.location},${r.staff},${r.date}\n`;
+        csv += `${r.id},${status},${r.telco},${r.remains},${formatDate(r.expiry)},${r.location},${r.staff},${r.date}\n`;
       });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
