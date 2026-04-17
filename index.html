@@ -3,63 +3,368 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SIM 雲端管理系統 V3.6</title>
+  <title>SIM管理系統 V3.7</title>
   <style>
-    body { font-family: system-ui, -apple-system, sans-serif; background-color: #f1f5f9; padding: 20px; color: #334155; margin: 0; }
-    .container { max-width: 1350px; margin: 0 auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
-    .dashboard { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
-    .stat-card { background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; flex: 1; min-width: 120px; text-align: center; }
-    .stat-card .label { font-size: 40px; color: #64748b; font-weight: bold; }
-    .stat-card .value { font-size: 40px; font-weight: 900; color: #1e293b; }
-    .header-box { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px; }
-    h1 { margin: 0; font-size: 26px; }
-    h1 span { color: #3b82f6; }
-    .tool-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; background: #f8fafc; padding: 12px 15px; border-radius: 15px; flex-wrap: wrap; }
-    .search-box { flex: 1; min-width: 250px; padding: 10px 15px; border: 2px solid #e2e8f0; border-radius: 10px; outline: none; }
-    .btn { padding: 10px 18px; border-radius: 10px; cursor: pointer; font-weight: bold; border: none; transition: 0.3s; font-size: 13px; display: inline-flex; align-items: center; gap: 5px; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: #f1f5f9;
+      padding: 20px;
+      color: #334155;
+      margin: 0;
+    }
+
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+      background: white;
+      padding: 25px;
+      border-radius: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    }
+
+    .dashboard {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .stat-card {
+      background: #f8fafc;
+      padding: 18px;
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+      flex: 1;
+      min-width: 180px;
+      text-align: center;
+    }
+
+    .stat-card .label {
+      font-size: 32px;
+      color: #64748b;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    .stat-card .value {
+      font-size: 44px;
+      font-weight: 900;
+      color: #1e293b;
+      line-height: 1.1;
+    }
+
+    .header-box {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 44px;
+      font-weight: 900;
+      color: #0f172a;
+    }
+
+    .tool-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+      background: #f8fafc;
+      padding: 16px;
+      border-radius: 16px;
+      flex-wrap: wrap;
+    }
+
+    .search-box {
+      flex: 1;
+      min-width: 280px;
+      padding: 16px 18px;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      outline: none;
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    .btn {
+      padding: 14px 22px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: bold;
+      border: none;
+      transition: 0.3s;
+      font-size: 22px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
     .btn-refresh { background: #fff; border: 1px solid #e2e8f0; color: #475569; }
     .btn-sync { background: #f59e0b; color: white; }
-    .btn-sync.dirty { background: #10b981 !important; box-shadow: 0 0 15px rgba(16, 185, 129, 0.6); animation: pulse 1.5s infinite; }
+    .btn-sync.dirty {
+      background: #10b981 !important;
+      box-shadow: 0 0 15px rgba(16, 185, 129, 0.6);
+      animation: pulse 1.5s infinite;
+    }
     .btn-excel { background: #059669; color: white; }
     .btn-log { background: #6366f1; color: white; }
     .btn-history { background: #475569; color: white; }
     .btn-lost { background: #dc2626; color: white; }
     .btn-unlost { background: #f59e0b; color: white; }
-    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
-    .expiring-soon { color: #ef4444 !important; font-weight: 900 !important; animation: blink 1s infinite; }
-    @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
-    th { background: #1e293b; color: #94a3b8; padding: 15px 10px; text-align: left; font-size: 40px; }
- td { 
-    padding: 15px 10px; 
-    border-bottom: 1px solid #f1f5f9; 
-    overflow: hidden; 
-    text-overflow: ellipsis; 
-    white-space: nowrap; 
-    font-size: 30px;  /* <--- 改呢個數字，加大就變 24px，縮細就 18px */
-}
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.03); }
+      100% { transform: scale(1); }
+    }
+
+    .expiring-soon {
+      color: #ef4444 !important;
+      font-weight: 900 !important;
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+      0% { opacity: 1; }
+      50% { opacity: 0.6; }
+      100% { opacity: 1; }
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 16px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      min-width: 1700px;
+    }
+
+    th {
+      background: #1e293b;
+      color: #cbd5e1;
+      padding: 18px 12px;
+      text-align: left;
+      font-size: 24px;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 18px 12px;
+      border-bottom: 1px solid #f1f5f9;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 26px;
+      vertical-align: middle;
+    }
+
     tr.selected { background-color: #eff6ff !important; }
     tr.row-lost { background: #fef2f2 !important; }
-    .checkbox-cell { width: 40px; text-align: center; }
-    input[type="checkbox"] { transform: scale(1.3); cursor: pointer; }
-    .badge { padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 900; }
+
+    .checkbox-cell {
+      width: 60px;
+      text-align: center;
+    }
+
+    input[type="checkbox"] {
+      transform: scale(1.8);
+      cursor: pointer;
+    }
+
+    .badge {
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 20px;
+      font-weight: 900;
+      display: inline-block;
+    }
+
     .badge-stock { background: #dcfce7; color: #166534; }
     .badge-used { background: #dbeafe; color: #1e40af; }
     .badge-lost { background: #fee2e2; color: #b91c1c; }
-    .quick-edit-btn { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; margin-left: 5px; background: #f1f5f9; border-radius: 5px; cursor: pointer; color: #94a3b8; border: 1px solid #e2e8f0; font-size: 10px; }
-    .btn-edit { background: #334155; color: white; padding: 6px 12px; border-radius: 8px; cursor:pointer; border:none; }
-    .btn-reset-single { color: #cbd5e1; font-size: 24px; font-weight: 700; line-height: 1; border:none; background:none; cursor:pointer; padding: 0 4px; }
-    #loader { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.8); backdrop-filter: blur(5px); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; }
-    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 9000; backdrop-filter: blur(4px); }
-    .modal-content { background: white; padding: 30px; border-radius: 20px; width: 90%; max-width: 450px; }
-    .history-table-container { max-height: 400px; overflow-y: auto; margin-top: 15px; border: 1px solid #e2e8f0; border-radius: 10px; }
-    input, select { width: 100%; padding: 12px; border: 2px solid #f1f5f9; border-radius: 10px; margin-bottom: 15px; box-sizing: border-box; font-weight: bold; }
-    .telco-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-    .telco-btn { padding: 12px; border: 2px solid #f1f5f9; border-radius: 10px; background: #fff; cursor: pointer; font-weight: bold; text-align: center; }
-    .batch-btn-group { display: none; gap: 10px; flex-wrap: wrap; }
-    .admin-footer { margin-top: 40px; padding-top: 20px; border-top: 1px dashed #e2e8f0; display: flex; justify-content: center; align-items: center; }
-    .bottom-tools { margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
-    .modal-actions { display:flex; gap:10px; flex-wrap:wrap; }
+
+    .quick-edit-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      margin-left: 8px;
+      background: #f1f5f9;
+      border-radius: 8px;
+      cursor: pointer;
+      color: #64748b;
+      border: 1px solid #e2e8f0;
+      font-size: 16px;
+      vertical-align: middle;
+    }
+
+    .btn-edit {
+      background: #334155;
+      color: white;
+      padding: 10px 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      border: none;
+      font-size: 22px;
+      font-weight: 800;
+    }
+
+    .btn-reset-single {
+      color: #94a3b8;
+      font-size: 34px;
+      font-weight: 700;
+      line-height: 1;
+      border: none;
+      background: none;
+      cursor: pointer;
+      padding: 0 8px;
+      vertical-align: middle;
+    }
+
+    #loader {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(255,255,255,0.8);
+      backdrop-filter: blur(5px);
+      z-index: 9999;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 28px;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      align-items: center;
+      justify-content: center;
+      z-index: 9000;
+      backdrop-filter: blur(4px);
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .modal-content {
+      background: white;
+      padding: 30px;
+      border-radius: 20px;
+      width: 95%;
+      max-width: 620px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-content h2 {
+      margin-top: 0;
+      font-size: 32px;
+      margin-bottom: 18px;
+    }
+
+    .modal-content p,
+    .modal-content label {
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .history-table-container {
+      max-height: 450px;
+      overflow-y: auto;
+      margin-top: 15px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 16px;
+      border: 2px solid #f1f5f9;
+      border-radius: 12px;
+      margin-bottom: 18px;
+      box-sizing: border-box;
+      font-weight: bold;
+      font-size: 22px;
+    }
+
+    .telco-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 15px;
+    }
+
+    .telco-btn {
+      padding: 18px;
+      border: 2px solid #f1f5f9;
+      border-radius: 12px;
+      background: #fff;
+      cursor: pointer;
+      font-weight: bold;
+      text-align: center;
+      font-size: 22px;
+    }
+
+    .batch-btn-group {
+      display: none;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .admin-footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px dashed #e2e8f0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .bottom-tools {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 768px) {
+      body { padding: 12px; }
+      .container { padding: 16px; }
+      h1 { font-size: 32px; }
+      .stat-card .label { font-size: 24px; }
+      .stat-card .value { font-size: 34px; }
+      .btn { font-size: 18px; padding: 12px 16px; }
+      .search-box { font-size: 18px; }
+      th { font-size: 18px; }
+      td { font-size: 18px; }
+      .badge { font-size: 16px; }
+      .btn-edit { font-size: 18px; }
+      .modal-content h2 { font-size: 24px; }
+      .modal-content p, .modal-content label { font-size: 18px; }
+      input, select { font-size: 18px; }
+      .telco-btn { font-size: 18px; }
+    }
   </style>
 </head>
 <body>
@@ -74,7 +379,7 @@
     </div>
 
     <div class="header-box">
-      <h1>SIM <span>Cloud</span></h1>
+      <h1>SIM管理系統</h1>
       <div style="display: flex; gap: 10px; flex-wrap:wrap;">
         <button onclick="showHistoryLog()" class="btn btn-history">📜 操作紀錄</button>
         <button onclick="loadData()" class="btn btn-refresh">🔄 刷新</button>
@@ -92,26 +397,28 @@
       </div>
     </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th class="checkbox-cell"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
-          <th style="width:60px;">編號</th>
-          <th style="width:80px;">狀態</th>
-          <th style="width:120px;">電訊商</th>
-          <th style="width:100px;">可用量</th>
-          <th style="width:130px;">到期日</th>
-          <th style="width:90px;">地點</th>
-          <th style="width:95px;">領取人</th>
-          <th style="width:110px; text-align:center">更新時間</th>
-          <th style="width:130px; text-align:center">操作</th>
-        </tr>
-      </thead>
-      <tbody id="simTable"></tbody>
-    </table>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="checkbox-cell"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
+            <th style="width:90px;">編號</th>
+            <th style="width:130px;">狀態</th>
+            <th style="width:180px;">電訊商</th>
+            <th style="width:150px;">可用量</th>
+            <th style="width:220px;">到期日</th>
+            <th style="width:160px;">地點</th>
+            <th style="width:180px;">領取人</th>
+            <th style="width:180px; text-align:center;">更新時間</th>
+            <th style="width:170px; text-align:center;">操作</th>
+          </tr>
+        </thead>
+        <tbody id="simTable"></tbody>
+      </table>
+    </div>
 
     <div class="admin-footer">
-      <button onclick="resetAllRecords()" class="btn" style="background:#fee2e2; color:#b91c1c; border:1px solid #fecaca; font-size:12px;">⚠️ 重設全表狀態</button>
+      <button onclick="resetAllRecords()" class="btn" style="background:#fee2e2; color:#b91c1c; border:1px solid #fecaca;">⚠️ 重設全表狀態</button>
     </div>
 
     <div class="bottom-tools">
@@ -121,15 +428,15 @@
   </div>
 
   <div id="historyLogModal" class="modal">
-    <div class="modal-content" style="max-width: 850px; width: 95%;">
+    <div class="modal-content" style="max-width: 1000px; width: 95%;">
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <h2>系統操作紀錄 (最近 1000 則)</h2>
       </div>
       <div class="history-table-container">
-        <table style="table-layout: auto;">
+        <table style="table-layout: auto; min-width: 100%;">
           <thead style="position: sticky; top: 0; z-index: 10;">
             <tr>
-              <th style="width:160px;">操作時間</th>
+              <th style="width:220px;">操作時間</th>
               <th>動作詳細內容</th>
             </tr>
           </thead>
@@ -249,8 +556,13 @@
     function logAction(idx, msg, customDiff = "") {
       const now = new Date();
       const timeStr = now.toLocaleString('zh-HK', {
-        year: 'numeric', month: '2-digit', day: '2-digit',
-        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
       });
 
       const recordId = simRecords[idx]?.id ?? "?";
@@ -279,7 +591,7 @@
 
       const btnGroup = document.getElementById('telcoBtnGroup');
       telcoList.forEach(t => {
-        let btn = document.createElement('div');
+        const btn = document.createElement('div');
         btn.className = 'telco-btn';
         btn.innerText = t;
         btn.onclick = () => {
@@ -325,6 +637,7 @@
           date: r.date || "---"
         }));
       } catch(e) {
+        console.error(e);
         alert("讀取失敗");
       }
       selectedIndices.clear();
@@ -344,6 +657,7 @@
         setDirty(false);
         alert("✅ 數據同步成功");
       } catch(e) {
+        console.error(e);
         alert("同步失敗");
       }
       toggleLoader(false);
@@ -372,7 +686,7 @@
         const isChecked = selectedIndices.has(i);
         const isExp = (d) => {
           if (!d || d === "---") return false;
-          const diff = Math.ceil((new Date(d) - new Date().setHours(0,0,0,0)) / (1000*60*60*24));
+          const diff = Math.ceil((new Date(d) - new Date().setHours(0,0,0,0)) / (1000 * 60 * 60 * 24));
           return diff >= 0 && diff <= 7;
         };
 
@@ -386,7 +700,7 @@
             <td class="${isExp(r.expiry) ? 'expiring-soon' : ''}">${r.expiry}<div class="quick-edit-btn" onclick="quickEditExpiry(${i})">✏️</div></td>
             <td>${r.location}</td>
             <td style="color:#2563eb; font-weight:900;">${r.staff}</td>
-            <td style="font-size:10px; color:#cbd5e1; text-align:center;">${r.date}</td>
+            <td style="font-size:18px; color:#94a3b8; text-align:center;">${r.date}</td>
             <td style="text-align:center;">
               <button onclick="openEditModal(${i})" class="btn-edit">改</button>
               <button onclick="resetSingle(${i})" class="btn-reset-single">✕</button>
@@ -404,7 +718,8 @@
     }
 
     function toggleRow(i) {
-      selectedIndices.has(i) ? selectedIndices.delete(i) : selectedIndices.add(i);
+      if (selectedIndices.has(i)) selectedIndices.delete(i);
+      else selectedIndices.add(i);
       render();
     }
 
@@ -650,8 +965,8 @@
       } else {
         tbody.innerHTML = historyLogs.map(log => `
           <tr>
-            <td style="color:#64748b; font-family: monospace; font-size:12px; vertical-align:top;">${log.time}</td>
-            <td style="white-space: normal; word-break: break-all; font-weight:500; color:#1e293b; line-height:1.4;">${log.action}</td>
+            <td style="color:#64748b; font-family: monospace; font-size:18px; vertical-align:top;">${log.time}</td>
+            <td style="white-space: normal; word-break: break-all; font-weight:500; color:#1e293b; line-height:1.6; font-size:22px;">${log.action}</td>
           </tr>
         `).join('');
       }
