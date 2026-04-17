@@ -9,8 +9,8 @@
     .container { max-width: 1350px; margin: 0 auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
     .dashboard { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
     .stat-card { background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; flex: 1; min-width: 120px; text-align: center; }
-    .stat-card .label { font-size: 11px; color: #64748b; font-weight: bold; }
-    .stat-card .value { font-size: 24px; font-weight: 900; color: #1e293b; }
+    .stat-card .label { font-size: 40px; color: #64748b; font-weight: bold; }
+    .stat-card .value { font-size: 40px; font-weight: 900; color: #1e293b; }
     .header-box { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px; }
     h1 { margin: 0; font-size: 26px; }
     h1 span { color: #3b82f6; }
@@ -29,8 +29,15 @@
     .expiring-soon { color: #ef4444 !important; font-weight: 900 !important; animation: blink 1s infinite; }
     @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
     table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
-    th { background: #1e293b; color: #94a3b8; padding: 15px 10px; text-align: left; font-size: 12px; }
-    td { padding: 12px 10px; border-bottom: 1px solid #f1f5f9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    th { background: #1e293b; color: #94a3b8; padding: 15px 10px; text-align: left; font-size: 40px; }
+ td { 
+    padding: 15px 10px; 
+    border-bottom: 1px solid #f1f5f9; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+    white-space: nowrap; 
+    font-size: 30px;  /* <--- 改呢個數字，加大就變 24px，縮細就 18px */
+}
     tr.selected { background-color: #eff6ff !important; }
     tr.row-lost { background: #fef2f2 !important; }
     .checkbox-cell { width: 40px; text-align: center; }
