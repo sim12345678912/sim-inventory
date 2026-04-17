@@ -3,7 +3,7 @@
 <head>
    <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>SIM 雲端管理系統 V3.2</title>
+   <title>SIM 雲端管理系統 V3.3</title>
    <style>
        body { font-family: system-ui, -apple-system, sans-serif; background-color: #f1f5f9; padding: 20px; color: #334155; margin: 0; }
        .container { max-width: 1350px; margin: 0 auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
@@ -101,8 +101,7 @@
    <div id="historyLogModal" class="modal">
         <div class="modal-content" style="max-width: 850px; width: 95%;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h2>系統操作紀錄 (最近 200 則)</h2>
-                <button onclick="clearHistoryLog()" class="btn" style="background:#fee2e2; color:#b91c1c;">清空紀錄</button>
+                <h2>系統操作紀錄 (最近 1000 則)</h2>
             </div>
             <div class="history-table-container">
                 <table style="table-layout: auto;">
@@ -126,7 +125,7 @@
    <script>
        const GAS_URL = "https://script.google.com/macros/s/AKfycbxo6ov-Ffb0CHsufI5eFgj7aSY3ZN-L6mKcpoJarJtoDf9FnOJLwaxw5iaL31I9qysN/exec";
        const userList = ["Leo", "Mason", "Mayce", "Sherman", "ting ting", "Jenna", "Roy", "Arron", "solar", "Willam", "hanson"];
-       const telcoList = ["CSL", "3HK", "SmarTone", "CMHK", "Lucky SIM", "MORE", "鴨聊佳"];
+       const telcoList = ["CSL", "3HK", "SmarTone", "CMHK", "Lucky SIM", "MORE", "鴨聊佳", "LUCKY SIM", "VALUE", "3", "中移動"];
        
        let simRecords = [];
        let selectedIndices = new Set();
@@ -181,7 +180,7 @@
 
            const logEntry = { time: timeStr, action: fullMsg };
            historyLogs.unshift(logEntry);
-           if (historyLogs.length > 200) historyLogs.pop();
+           if (historyLogs.length > 1000) historyLogs.pop();
            localStorage.setItem('sim_history_logs', JSON.stringify(historyLogs));
        }
 
@@ -200,14 +199,6 @@
            document.getElementById('historyLogModal').style.display = 'flex';
        }
 
-       function clearHistoryLog() {
-           if(confirm("確定要清空本地所有 200 則紀錄嗎？")) {
-               historyLogs = [];
-               localStorage.removeItem('sim_history_logs');
-               showHistoryLog();
-           }
-       }
-
        function openHistory() { window.open("https://docs.google.com/spreadsheets/d/1QsQ19xSbsMXjcSa7hzItjOiQnwEoVtwpP3oPfcAp3MM/edit#gid=0"); }
        function toggleLoader(s) { document.getElementById('loader').style.display = s ? 'flex' : 'none'; }
        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
@@ -222,7 +213,16 @@
            try {
                 const res = await fetch(GAS_URL + "?t=" + new Date().getTime());
                 const data = await res.json();
-                simRecords = data.map(r => ({ ...r, expiry: formatDate(r.expiry), action: r.action || "---" }));
+                simRecords = data.map(r => ({
+                    ...r,
+                    telco: String(r.telco ?? "---"),
+                    location: String(r.location ?? "---"),
+                    staff: String(r.staff ?? "---"),
+                    remains: String(r.remains ?? "---"),
+                    usage: String(r.usage ?? "---"),
+                    expiry: formatDate(r.expiry),
+                    action: r.action || "---"
+                }));
            } catch(e) { alert("讀取失敗"); }
            render(); toggleLoader(false);
        }
@@ -241,8 +241,15 @@
            const kw = document.getElementById('searchInput').value.toLowerCase();
            let counts = { total: simRecords.length, stock: 0, used: 0 };
            tbody.innerHTML = simRecords.map((r, i) => {
-                if (!(r.id.toLowerCase().includes(kw) || r.staff.toLowerCase().includes(kw) || r.telco.toLowerCase().includes(kw) || r.location.toLowerCase().includes(kw))) return "";
-                const isUsed = r.staff !== "---"; isUsed ? counts.used++ : counts.stock++;
+                const idText = String(r.id || "").toLowerCase();
+                const staffText = String(r.staff || "").toLowerCase();
+                const telcoText = String(r.telco || "").toLowerCase();
+                const locationText = String(r.location || "").toLowerCase();
+
+                if (!(idText.includes(kw) || staffText.includes(kw) || telcoText.includes(kw) || locationText.includes(kw))) return "";
+
+                const isUsed = r.staff !== "---";
+                isUsed ? counts.used++ : counts.stock++;
                 const isChecked = selectedIndices.has(i);
                 const isExp = (d) => {
                     if (!d || d === "---") return false;
@@ -329,7 +336,7 @@
        function openEditModal(idx) {
            currentIdx = idx; const r = simRecords[idx];
            document.getElementById('modalTitle').innerText = "編輯 " + r.id;
-           document.getElementById('inputUsageVal').value = r.remains.replace(" GB","") === "---" ? "" : r.remains.replace(" GB","");
+           document.getElementById('inputUsageVal').value = String(r.remains).replace("GB","").replace(" GB","").trim() === "---" ? "" : String(r.remains).replace("GB","").replace(" GB","").trim();
            document.getElementById('inputLoc').value = r.location === "---" ? "" : r.location;
            document.getElementById('selectStaff').value = r.staff;
            document.getElementById('editModal').style.display = 'flex';
@@ -338,7 +345,7 @@
        function confirmSave() {
            const r = simRecords[currentIdx];
            let newV = document.getElementById('inputUsageVal').value.trim();
-           if(newV && !isNaN(newV)) newV += " GB";
+           if(newV && !isNaN(newV)) newV += "GB";
            if(!newV) newV = "---";
 
            const newL = document.getElementById('inputLoc').value.trim() || "---";
