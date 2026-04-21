@@ -527,6 +527,23 @@
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
 
+    function formatUpdateTime(str) {
+      if (!str || str === "---") return "---";
+
+      const s = String(str).trim();
+
+      if (s.includes("T")) {
+        const d = new Date(s);
+        if (isNaN(d)) return s;
+        return `${d.getMonth() + 1}月${d.getDate()}日 ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      }
+
+      const d = new Date(s.replace(/-/g, "/"));
+      if (isNaN(d)) return s;
+
+      return `${d.getMonth() + 1}月${d.getDate()}日 ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    }
+
     function normalizeUsage(record) {
       const usage = String(record.usage || "").trim();
       if (usage === "遺失") return "遺失";
@@ -571,7 +588,7 @@
       if (!dateStr || dateStr === "---") return false;
       if (getAutoStatus(record) !== "已領用") return false;
 
-      const parsed = new Date(dateStr.replace(/-/g, "/"));
+      const parsed = new Date(String(dateStr).replace(/-/g, "/"));
       if (isNaN(parsed)) return false;
 
       const now = new Date();
@@ -755,7 +772,7 @@
             <td class="${expiryClass}">${formatDate(r.expiry)}<div class="quick-edit-btn" onclick="quickEditExpiry(${i})">✏️</div></td>
             <td>${r.location}</td>
             <td style="color:#2563eb; font-weight:900;">${r.staff}</td>
-            <td style="font-size:13px; color:#94a3b8; text-align:center;">${r.date}</td>
+            <td style="font-size:13px; color:#94a3b8; text-align:center;">${formatUpdateTime(r.date)}</td>
             <td style="text-align:center;">
               <button onclick="openEditModal(${i})" class="btn-edit">改</button>
               <button onclick="resetSingle(${i})" class="btn-reset-single">✕</button>
@@ -1036,7 +1053,7 @@
       let csv = "\uFEFF編號,狀態,電訊商,可用量,到期日,地點,人員,更新時間\n";
       simRecords.forEach(r => {
         const status = getAutoStatus(r);
-        csv += `${r.id},${status},${r.telco},${r.remains},${formatDate(r.expiry)},${r.location},${r.staff},${r.date}\n`;
+        csv += `${r.id},${status},${r.telco},${r.remains},${formatDate(r.expiry)},${r.location},${r.staff},${formatUpdateTime(r.date)}\n`;
       });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
