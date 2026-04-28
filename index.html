@@ -13,6 +13,14 @@
       margin: 0;
     }
 
+    * {
+      box-sizing: border-box;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
     .container {
       max-width: 1450px;
       margin: 0 auto;
@@ -116,6 +124,7 @@
     .btn-history { background: #475569; color: white; }
     .btn-lost { background: #dc2626; color: white; }
     .btn-unlost { background: #f59e0b; color: white; }
+    .btn-logout { background: #dc2626; color: white; }
 
     @keyframes pulse {
       0% { transform: scale(1); }
@@ -355,6 +364,75 @@
       margin-top: 10px;
     }
 
+    /* Login */
+    .login-overlay {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(135deg, #0f172a, #1e3a8a);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 10000;
+    }
+
+    .login-box {
+      width: 100%;
+      max-width: 380px;
+      background: rgba(255,255,255,0.97);
+      border-radius: 18px;
+      box-shadow: 0 18px 50px rgba(0,0,0,0.25);
+      padding: 28px 22px;
+    }
+
+    .login-box h2 {
+      margin: 0 0 10px 0;
+      font-size: 26px;
+      text-align: center;
+      color: #0f172a;
+      font-weight: 900;
+    }
+
+    .login-box p {
+      margin: 0 0 18px 0;
+      text-align: center;
+      color: #64748b;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .remember-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      font-size: 14px;
+      color: #374151;
+      font-weight: 700;
+    }
+
+    .remember-row input[type="checkbox"] {
+      width: auto;
+      margin: 0;
+      transform: scale(1.1);
+    }
+
+    .error-msg {
+      min-height: 20px;
+      color: #dc2626;
+      font-size: 14px;
+      margin-bottom: 10px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .top-right-tools {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
     @media (max-width: 768px) {
       body { padding: 12px; }
       .container { padding: 14px; }
@@ -375,62 +453,84 @@
   </style>
 </head>
 <body>
+  <div id="loginOverlay" class="login-overlay">
+    <div class="login-box">
+      <h2>SIM管理系統</h2>
+      <p>請輸入密碼先可進入系統</p>
+
+      <label for="passwordInput" style="display:block; margin-bottom:8px; font-weight:800;">密碼</label>
+      <input id="passwordInput" type="password" placeholder="請輸入密碼" />
+
+      <label class="remember-row">
+        <input id="rememberMe" type="checkbox" />
+        記住登入狀態
+      </label>
+
+      <div id="errorMsg" class="error-msg"></div>
+
+      <button onclick="login()" class="btn" style="width:100%; background:#2563eb; color:white; justify-content:center;">登入</button>
+    </div>
+  </div>
+
   <div id="loader">⚙️ 正在讀取雲端數據...</div>
 
-  <div class="container">
-    <div class="dashboard">
-      <div class="stat-card"><div class="label">總卡片</div><div id="statTotal" class="value">0</div></div>
-      <div class="stat-card"><div class="label">在庫</div><div id="statInStock" class="value" style="color:#10b981">0</div></div>
-      <div class="stat-card"><div class="label">已領用</div><div id="statUsed" class="value" style="color:#3b82f6">0</div></div>
-      <div class="stat-card"><div class="label">遺失</div><div id="statLost" class="value" style="color:#dc2626">0</div></div>
-    </div>
-
-    <div class="header-box">
-      <h1>SIM管理系統</h1>
-      <div style="display: flex; gap: 10px; flex-wrap:wrap;">
-        <button onclick="showHistoryLog()" class="btn btn-history">📜 操作紀錄</button>
-        <button onclick="loadData()" class="btn btn-refresh">🔄 刷新</button>
-        <button onclick="uploadData()" id="syncBtn" class="btn btn-sync">💾 儲存並同步</button>
+  <div id="appWrapper" class="hidden">
+    <div class="container">
+      <div class="dashboard">
+        <div class="stat-card"><div class="label">總卡片</div><div id="statTotal" class="value">0</div></div>
+        <div class="stat-card"><div class="label">在庫</div><div id="statInStock" class="value" style="color:#10b981">0</div></div>
+        <div class="stat-card"><div class="label">已領用</div><div id="statUsed" class="value" style="color:#3b82f6">0</div></div>
+        <div class="stat-card"><div class="label">遺失</div><div id="statLost" class="value" style="color:#dc2626">0</div></div>
       </div>
-    </div>
 
-    <div class="tool-bar">
-      <input type="text" id="searchInput" class="search-box" placeholder="🔍 搜尋 ID、人員、地點、電訊商或狀態..." oninput="render()">
-      <div id="batchTools" class="batch-btn-group">
-        <button onclick="openBatchClaim()" class="btn" style="background:#2563eb;color:white;">🎁 批量修改 (<span id="selectCount">0</span>)</button>
-        <button onclick="batchReset()" class="btn" style="background:#fff1f2; color:#be123c; border:1px solid #fecaca;">🧹 批量歸還</button>
-        <button onclick="batchMarkLost()" class="btn btn-lost">🚨 批量標記遺失</button>
-        <button onclick="batchUnmarkLost()" class="btn btn-unlost">↩️ 取消遺失</button>
+      <div class="header-box">
+        <h1>SIM管理系統</h1>
+        <div class="top-right-tools">
+          <button onclick="showHistoryLog()" class="btn btn-history">📜 操作紀錄</button>
+          <button onclick="loadData()" class="btn btn-refresh">🔄 刷新</button>
+          <button onclick="uploadData()" id="syncBtn" class="btn btn-sync">💾 儲存並同步</button>
+          <button onclick="logout()" class="btn btn-logout">🚪 登出</button>
+        </div>
       </div>
-    </div>
 
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th class="checkbox-cell"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
-            <th style="width:70px;">編號</th>
-            <th style="width:90px;">狀態</th>
-            <th style="width:130px;">電訊商</th>
-            <th style="width:100px;">可用量</th>
-            <th style="width:130px;">到期日</th>
-            <th style="width:100px;">地點</th>
-            <th style="width:110px;">領取人</th>
-            <th style="width:140px; text-align:center;">更新時間</th>
-            <th style="width:110px; text-align:center;">操作</th>
-          </tr>
-        </thead>
-        <tbody id="simTable"></tbody>
-      </table>
-    </div>
+      <div class="tool-bar">
+        <input type="text" id="searchInput" class="search-box" placeholder="🔍 搜尋 ID、人員、地點、電訊商或狀態..." oninput="render()">
+        <div id="batchTools" class="batch-btn-group">
+          <button onclick="openBatchClaim()" class="btn" style="background:#2563eb;color:white;">🎁 批量修改 (<span id="selectCount">0</span>)</button>
+          <button onclick="batchReset()" class="btn" style="background:#fff1f2; color:#be123c; border:1px solid #fecaca;">🧹 批量歸還</button>
+          <button onclick="batchMarkLost()" class="btn btn-lost">🚨 批量標記遺失</button>
+          <button onclick="batchUnmarkLost()" class="btn btn-unlost">↩️ 取消遺失</button>
+        </div>
+      </div>
 
-    <div class="admin-footer">
-      <button onclick="resetAllRecords()" class="btn" style="background:#fee2e2; color:#b91c1c; border:1px solid #fecaca;">⚠️ 重設全表狀態</button>
-    </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="checkbox-cell"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
+              <th style="width:70px;">編號</th>
+              <th style="width:90px;">狀態</th>
+              <th style="width:130px;">電訊商</th>
+              <th style="width:100px;">可用量</th>
+              <th style="width:130px;">到期日</th>
+              <th style="width:100px;">地點</th>
+              <th style="width:110px;">領取人</th>
+              <th style="width:140px; text-align:center;">更新時間</th>
+              <th style="width:110px; text-align:center;">操作</th>
+            </tr>
+          </thead>
+          <tbody id="simTable"></tbody>
+        </table>
+      </div>
 
-    <div class="bottom-tools">
-      <button onclick="openHistory()" class="btn btn-log">📊 原始表格</button>
-      <button onclick="exportToExcel()" class="btn btn-excel">📥 匯出 Excel</button>
+      <div class="admin-footer">
+        <button onclick="resetAllRecords()" class="btn" style="background:#fee2e2; color:#b91c1c; border:1px solid #fecaca;">⚠️ 重設全表狀態</button>
+      </div>
+
+      <div class="bottom-tools">
+        <button onclick="openHistory()" class="btn btn-log">📊 原始表格</button>
+        <button onclick="exportToExcel()" class="btn btn-excel">📥 匯出 Excel</button>
+      </div>
     </div>
   </div>
 
@@ -502,6 +602,8 @@
   </div>
 
   <script>
+    const APP_PASSWORD = "4348";
+    const LOGIN_STORAGE_KEY = "sim_system_logged_in";
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzxDKUjBcUcTAB7S3Gbg2S4fL8poFJQWvKAZ2r3bwDFd7T53HoMBR9jfVIHwRGU45le/exec";
     const userList = ["Leo", "Mason", "Mayce", "Sherman", "ting ting", "Jenna", "Roy", "Arron", "solar", "Willam", "hanson"];
     const telcoList = ["CSL", "3HK", "SmarTone", "CMHK", "Lucky SIM", "MORE", "鴨聊佳", "VALUE", "其他"];
@@ -511,6 +613,59 @@
     let currentIdx = null;
     let isDirty = false;
     let historyLogs = JSON.parse(localStorage.getItem('sim_history_logs')) || [];
+
+    function showApp() {
+      document.getElementById("loginOverlay").classList.add("hidden");
+      document.getElementById("appWrapper").classList.remove("hidden");
+    }
+
+    function showLogin() {
+      document.getElementById("loginOverlay").classList.remove("hidden");
+      document.getElementById("appWrapper").classList.add("hidden");
+    }
+
+    function login() {
+      const passwordInput = document.getElementById("passwordInput");
+      const rememberMe = document.getElementById("rememberMe").checked;
+      const errorMsg = document.getElementById("errorMsg");
+      const password = passwordInput.value.trim();
+
+      if (password === APP_PASSWORD) {
+        errorMsg.textContent = "";
+        if (rememberMe) {
+          localStorage.setItem(LOGIN_STORAGE_KEY, "yes");
+          sessionStorage.removeItem(LOGIN_STORAGE_KEY);
+        } else {
+          sessionStorage.setItem(LOGIN_STORAGE_KEY, "yes");
+          localStorage.removeItem(LOGIN_STORAGE_KEY);
+        }
+        showApp();
+        loadData();
+      } else {
+        errorMsg.textContent = "密碼錯誤，請再輸入。";
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem(LOGIN_STORAGE_KEY);
+      sessionStorage.removeItem(LOGIN_STORAGE_KEY);
+      document.getElementById("passwordInput").value = "";
+      document.getElementById("rememberMe").checked = false;
+      document.getElementById("errorMsg").textContent = "";
+      showLogin();
+    }
+
+    function checkLogin() {
+      const loggedInLocal = localStorage.getItem(LOGIN_STORAGE_KEY) === "yes";
+      const loggedInSession = sessionStorage.getItem(LOGIN_STORAGE_KEY) === "yes";
+
+      if (loggedInLocal || loggedInSession) {
+        showApp();
+        loadData();
+      } else {
+        showLogin();
+      }
+    }
 
     function formatDate(str) {
       if (!str || str === "---") return "---";
@@ -658,6 +813,9 @@
       const s1 = document.getElementById('selectStaff');
       const s2 = document.getElementById('batchStaff');
 
+      s1.innerHTML = "";
+      s2.innerHTML = "";
+
       const baseOptions = [new Option("-- 未領取 --", "---"), ...userList.map(n => new Option(n, n))];
       baseOptions.forEach(o => s1.add(o.cloneNode(true)));
 
@@ -665,6 +823,8 @@
       baseOptions.forEach(o => s2.add(o.cloneNode(true)));
 
       const btnGroup = document.getElementById('telcoBtnGroup');
+      btnGroup.innerHTML = "";
+
       telcoList.forEach(t => {
         const btn = document.createElement('div');
         btn.className = 'telco-btn';
@@ -692,7 +852,13 @@
         btnGroup.appendChild(btn);
       });
 
-      loadData();
+      document.getElementById("passwordInput").addEventListener("keydown", function(e) {
+        if (e.key === "Enter") {
+          login();
+        }
+      });
+
+      checkLogin();
     };
 
     async function loadData() {
